@@ -1,0 +1,78 @@
+LoopInterval: 60s
+WorkingInstanceFilters:
+  - Name: tag:Role
+    Values: ["spot-autoscaler-sample"]
+  - Name: tag:Status
+    Values: ["working"]
+InstanceCapacityByType:
+  c4.large: 8
+  m4.large: 6.5
+BiddingPriceByType:
+  c4.large: 0.101
+  m4.large: 0.174
+LaunchConfiguration:
+  BlockDeviceMappings:
+    - DeviceName: /dev/sda1
+      EBS:
+        DeleteOnTermination: true
+        VolumeSize: 30
+        VolumeType: gp2
+  KeyName: "your-key"
+  SecurityGroupIDs:
+    - sg-dummy
+  IAMInstanceProfileName: YourRole
+  InstanceInitiatedShutdownBehavior: terminate # or stop
+  UserData: |
+    #!/bin/sh
+    set -e
+    apt-get update
+    apt-get -y install awscli
+    aws --region ap-northeast-1 ec2 create-tags --resources $(curl http://169.254.169.254/latest/meta-data/instance-id) --tags Key=Status,Value=working Key=Role,Value=spot-autoscaler-sample
+InstanceVarieties:
+  - InstanceType: c4.large
+    SubnetID: subnet-dummy
+    LaunchMethod: spot
+  - InstanceType: m4.large
+    SubnetID: subnet-dummy
+    LaunchMethod: spot
+FallbackInstanceVarieties:
+  - InstanceType: c4.large
+    SubnetID: subnet-dummy
+    LaunchMethod: ondemand
+ScalingPolicies:
+  - If: greaterThan
+    Threshold: 85
+    MetricType: median
+    Target: 75
+  - If: lessThan
+    Threshold: 65
+    MetricType: max
+    Target: 75
+RedisHost: localhost:6379
+RedisKeyPrefix: spot-autoscaler-sample/
+Cooldown: 5m
+SpotRequestFulfilledIn: 5m
+InstanceTags:
+  - Key: Hello
+    Value: World
+TerminateTags:
+  - Key: Status
+    Value: terminating
+HookCommands:
+  - Command: cat
+    Args: []
+AMICommand:
+  Command: echo
+  Args: ["-n", "ami-a21529cc"]
+CapacityTagKey: Weight
+MinimumCapacity: 1
+# MaximumCapacity: 100
+# MinimumScalingRate: 0.5
+# MaximumScalingRate: 1.5
+Timers:
+  Hello:
+    Command:
+      Command: echo
+      Args: ["Hello"]
+    After: LaunchingInstances
+    Duration: 2m
