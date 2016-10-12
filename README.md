@@ -28,4 +28,3 @@ $ curl -XDELETE 'localhost:8080/schedules?key=2016-10-05T09:45:59.315042705Z'
 ## Future works
 
 - [ ] Selectable scaling strategy/policy
-- [ ] OSS
