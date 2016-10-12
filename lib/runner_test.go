@@ -65,6 +65,7 @@ func TestRecoverDeadSIRs(t *testing.T) {
 			SpotInstanceRequestId: aws.String("sir-abc"),
 			LaunchSpecification: &ec2.LaunchSpecification{
 				InstanceType: aws.String("c4.large"),
+				SubnetId:     aws.String("subnet-dummy"),
 			},
 			Status: &ec2.SpotInstanceStatus{
 				Code: aws.String("dummy"),
