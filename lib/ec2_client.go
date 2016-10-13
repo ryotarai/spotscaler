@@ -400,10 +400,20 @@ func (c *EC2Client) CreateStatusTagsOfSIRs(reqs []*ec2.SpotInstanceRequest, stat
 func (c *EC2Client) DescribeSpotPrices(vs []InstanceVariety) (map[InstanceVariety]float64, error) {
 	res := map[InstanceVariety]float64{}
 
+	varietiesByAZ := map[string][]InstanceVariety{}
 	for _, v := range vs {
+		varietiesByAZ[v.AvailabilityZone] = append(varietiesByAZ[v.AvailabilityZone], v)
+	}
+
+	for az, vs := range varietiesByAZ {
+		instanceTypes := []*string{}
+		for _, v := range vs {
+			instanceTypes = append(instanceTypes, aws.String(v.InstanceType))
+		}
+
 		input := &ec2.DescribeSpotPriceHistoryInput{
-			AvailabilityZone:    aws.String(v.AvailabilityZone),
-			InstanceTypes:       []*string{aws.String(v.InstanceType)},
+			AvailabilityZone:    aws.String(az),
+			InstanceTypes:       instanceTypes,
 			ProductDescriptions: []*string{aws.String("Linux/UNIX (Amazon VPC)")}, // TODO: make configurable
 		}
 
@@ -412,25 +422,27 @@ func (c *EC2Client) DescribeSpotPrices(vs []InstanceVariety) (map[InstanceVariet
 			return nil, err
 		}
 
-		latestTimestamp := time.Time{}
-		latestPrice := 0.0
-		for _, p := range output.SpotPriceHistory {
-			if latestTimestamp.Before(*p.Timestamp) {
-				latestTimestamp = *p.Timestamp
-				f, err := strconv.ParseFloat(*p.SpotPrice, 64)
-				if err != nil {
-					return nil, err
+		for _, v := range vs {
+			latestTimestamp := time.Time{}
+			latestPrice := 0.0
+			for _, p := range output.SpotPriceHistory {
+				if latestTimestamp.Before(*p.Timestamp) && *p.InstanceType == v.InstanceType && *p.AvailabilityZone == v.AvailabilityZone {
+					latestTimestamp = *p.Timestamp
+					f, err := strconv.ParseFloat(*p.SpotPrice, 64)
+					if err != nil {
+						return nil, err
+					}
+
+					latestPrice = f
 				}
-
-				latestPrice = f
 			}
-		}
 
-		if latestPrice == 0.0 {
-			return nil, fmt.Errorf("Spot price of %v is not found", v)
-		}
+			if latestPrice == 0.0 {
+				return nil, fmt.Errorf("Spot price of %v is not found", v)
+			}
 
-		res[v] = latestPrice
+			res[v] = latestPrice
+		}
 	}
 
 	return res, nil
