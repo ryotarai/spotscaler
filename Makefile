@@ -8,7 +8,7 @@ install:
 	go install -ldflags "-X github.com/ryotarai/spot-autoscaler/lib.GitCommit=$(COMMIT)"
 
 test:
-	go test -v -tags test github.com/ryotarai/spot-autoscaler/lib
+	go test -v github.com/ryotarai/spot-autoscaler/lib
 
 genmock:
 	./genmock.sh EC2ClientIface

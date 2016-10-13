@@ -1,5 +1,3 @@
-// +build test
-
 package autoscaler
 
 import mock "github.com/stretchr/testify/mock"

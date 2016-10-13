@@ -1,5 +1,3 @@
-// +build test
-
 package autoscaler
 
 import ec2 "github.com/aws/aws-sdk-go/service/ec2"
