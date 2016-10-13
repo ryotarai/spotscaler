@@ -35,10 +35,10 @@ InstanceVarieties:
   - InstanceType: m4.large
     SubnetID: subnet-dummy
     LaunchMethod: spot
-FallbackInstanceVarieties:
-  - InstanceType: c4.large
-    SubnetID: subnet-dummy
-    LaunchMethod: ondemand
+FallbackInstanceVariety:
+  InstanceType: c4.large
+  SubnetID: subnet-dummy
+  LaunchMethod: ondemand
 ScalingPolicies:
   - If: greaterThan
     Threshold: 85

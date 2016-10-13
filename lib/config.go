@@ -10,29 +10,29 @@ import (
 
 // Config represents configuration loaded from a file
 type Config struct {
-	LaunchConfiguration       LaunchConfiguration `yaml:"LaunchConfiguration" validate:"required"`
-	WorkingInstanceFilters    EC2Filters          `yaml:"WorkingInstanceFilters" validate:"dive"`
-	TerminateTags             EC2Tags             `yaml:"TerminateTags" validate:"required,dive"`
-	InstanceTags              EC2Tags             `yaml:"InstanceTags" validate:"dive"`
-	LoopInterval              string              `yaml:"LoopInterval" validate:"required"`
-	InstanceCapacityByType    map[string]float64  `yaml:"InstanceCapacityByType" validate:"required"`
-	BiddingPriceByType        map[string]float64  `yaml:"BiddingPriceByType" validate:"required"`
-	ScalingPolicies           []ScalingPolicy     `yaml:"ScalingPolicies" validate:"dive"`
-	InstanceVarieties         []InstanceVariety   `yaml:"InstanceVarieties" validate:"required,dive"`
-	FallbackInstanceVarieties []InstanceVariety   `yaml:"FallbackInstanceVarieties" validate:"required,dive"`
-	RedisHost                 string              `yaml:"RedisHost" validate:"required"`
-	RedisKeyPrefix            string              `yaml:"RedisKeyPrefix"`
-	Cooldown                  string              `yaml:"Cooldown" validate:"required"`
-	SpotRequestFulfilledIn    string              `yaml:"SpotRequestFulfilledIn" validate:"required"`
-	HookCommands              []Command           `yaml:"HookCommands"`
-	AMICommand                Command             `yaml:"AMICommand"`
-	MinimumCapacity           float64             `yaml:"MinimumCapacity"`
-	MaximumCapacity           float64             `yaml:"MaximumCapacity"`
-	MinimumScalingRate        float64             `yaml:"MinimumScalingRate"`
-	MaximumScalingRate        float64             `yaml:"MaximumScalingRate"`
-	CapacityTagKey            string              `yaml:"CapacityTagKey"`
-	ConfirmBeforeAction       bool                `yaml:"ConfirmBeforeAction"`
-	Timers                    map[string]Timer    `yaml:"Timers" validate:"dive"`
+	LaunchConfiguration     LaunchConfiguration `yaml:"LaunchConfiguration" validate:"required"`
+	WorkingInstanceFilters  EC2Filters          `yaml:"WorkingInstanceFilters" validate:"dive"`
+	TerminateTags           EC2Tags             `yaml:"TerminateTags" validate:"required,dive"`
+	InstanceTags            EC2Tags             `yaml:"InstanceTags" validate:"dive"`
+	LoopInterval            string              `yaml:"LoopInterval" validate:"required"`
+	InstanceCapacityByType  map[string]float64  `yaml:"InstanceCapacityByType" validate:"required"`
+	BiddingPriceByType      map[string]float64  `yaml:"BiddingPriceByType" validate:"required"`
+	ScalingPolicies         []ScalingPolicy     `yaml:"ScalingPolicies" validate:"dive"`
+	InstanceVarieties       []InstanceVariety   `yaml:"InstanceVarieties" validate:"required,dive"`
+	FallbackInstanceVariety InstanceVariety     `yaml:"FallbackInstanceVariety" validate:"required,dive"`
+	RedisHost               string              `yaml:"RedisHost" validate:"required"`
+	RedisKeyPrefix          string              `yaml:"RedisKeyPrefix"`
+	Cooldown                string              `yaml:"Cooldown" validate:"required"`
+	SpotRequestFulfilledIn  string              `yaml:"SpotRequestFulfilledIn" validate:"required"`
+	HookCommands            []Command           `yaml:"HookCommands"`
+	AMICommand              Command             `yaml:"AMICommand"`
+	MinimumCapacity         float64             `yaml:"MinimumCapacity"`
+	MaximumCapacity         float64             `yaml:"MaximumCapacity"`
+	MinimumScalingRate      float64             `yaml:"MinimumScalingRate"`
+	MaximumScalingRate      float64             `yaml:"MaximumScalingRate"`
+	CapacityTagKey          string              `yaml:"CapacityTagKey"`
+	ConfirmBeforeAction     bool                `yaml:"ConfirmBeforeAction"`
+	Timers                  map[string]Timer    `yaml:"Timers" validate:"dive"`
 }
 
 // Validate validates config data
@@ -43,10 +43,8 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	for _, v := range c.FallbackInstanceVarieties {
-		if v.LaunchMethod != "ondemand" {
-			return fmt.Errorf("LaunchMethod in FallbackInstanceVarieties must be 'ondemand' but '%s'", v.LaunchMethod)
-		}
+	if c.FallbackInstanceVariety.LaunchMethod != "ondemand" {
+		return fmt.Errorf("LaunchMethod in FallbackInstanceVarieties must be 'ondemand' but '%s'", c.FallbackInstanceVariety.LaunchMethod)
 	}
 
 	validate := validator.New()

@@ -11,6 +11,7 @@ test:
 	go test -v github.com/ryotarai/spot-autoscaler/lib
 
 genmock:
+	rm lib/mock_*.go
 	./genmock.sh EC2ClientIface
 	./genmock.sh StatusStoreIface
 	./genmock.sh MetricProvider

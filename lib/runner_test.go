@@ -13,16 +13,19 @@ func configForTest() *Config {
 			"c4.large": 10,
 			"m4.large": 5,
 		},
-		FallbackInstanceVarieties: []InstanceVariety{
-			{
-				InstanceType: "m4.large",
-				SubnetID:     "subnet-abc",
-				LaunchMethod: "ondemand",
-			},
+		FallbackInstanceVariety: InstanceVariety{
+			InstanceType: "m4.large",
+			SubnetID:     "subnet-abc",
+			LaunchMethod: "ondemand",
 		},
 		InstanceVarieties: []InstanceVariety{
 			{
 				InstanceType: "c4.large",
+				SubnetID:     "subnet-abc",
+				LaunchMethod: "spot",
+			},
+			{
+				InstanceType: "m4.large",
 				SubnetID:     "subnet-abc",
 				LaunchMethod: "spot",
 			},
@@ -34,6 +37,10 @@ func configForTest() *Config {
 				Target:     3,
 				MetricType: "median",
 			},
+		},
+		BiddingPriceByType: map[string]float64{
+			"c4.large": 0.3,
+			"m4.large": 0.3,
 		},
 	}
 	SetCapacityTable(c.InstanceCapacityByType)
@@ -75,7 +82,7 @@ func TestRecoverDeadSIRs(t *testing.T) {
 
 	ec2Client := new(MockEC2ClientIface)
 	ec2Client.On("DescribeDeadSIRs").Return(reqs, nil)
-	ec2Client.On("LaunchInstances", config.FallbackInstanceVarieties[0], int64(2), "ami-abc").Return(nil)
+	ec2Client.On("LaunchInstances", config.FallbackInstanceVariety, int64(2), "ami-abc").Return(nil)
 	ec2Client.On("CreateStatusTagsOfSIRs", reqs, "recovered").Return(nil)
 	ec2Client.On("CancelOpenSIRs", reqs).Return(nil)
 
@@ -105,7 +112,12 @@ func TestScale(t *testing.T) {
 
 	ec2Client := new(MockEC2ClientIface)
 	ec2Client.On("DescribeWorkingInstances").Return(instances, nil)
+	ec2Client.On("DescribeSpotPrices", config.InstanceVarieties).Return(map[InstanceVariety]float64{
+		config.InstanceVarieties[0]: 0.1,
+		config.InstanceVarieties[1]: 10, // too high
+	}, nil)
 	ec2Client.On("LaunchInstances", config.InstanceVarieties[0], int64(1), "ami-abc").Return(nil)
+	ec2Client.On("LaunchInstances", config.FallbackInstanceVariety, int64(1), "ami-abc").Return(nil)
 
 	statusStore := new(MockStatusStoreIface)
 	statusStore.On("ListSchedules").Return([]*Schedule{}, nil)

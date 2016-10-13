@@ -82,6 +82,29 @@ func (_m *MockEC2ClientIface) DescribePendingAndActiveSIRs() ([]*ec2.SpotInstanc
 	return r0, r1
 }
 
+// DescribeSpotPrices provides a mock function with given fields: vs
+func (_m *MockEC2ClientIface) DescribeSpotPrices(vs []InstanceVariety) (map[InstanceVariety]float64, error) {
+	ret := _m.Called(vs)
+
+	var r0 map[InstanceVariety]float64
+	if rf, ok := ret.Get(0).(func([]InstanceVariety) map[InstanceVariety]float64); ok {
+		r0 = rf(vs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[InstanceVariety]float64)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func([]InstanceVariety) error); ok {
+		r1 = rf(vs)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribeWorkingInstances provides a mock function with given fields:
 func (_m *MockEC2ClientIface) DescribeWorkingInstances() (Instances, error) {
 	ret := _m.Called()

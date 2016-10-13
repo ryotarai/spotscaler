@@ -229,41 +229,36 @@ func (r *Runner) recoverDeadSIRs() (bool, error) {
 	log.Printf("[DEBUG] total capacity of dead requests: %f", totalCapacity)
 
 	// launch ondemand instances which meet the capacity
-	for _, v := range r.config.FallbackInstanceVarieties {
-		c, err := v.Capacity()
-		if err != nil {
-			return false, err
-		}
-
-		count := int64(math.Ceil(totalCapacity / c))
-		log.Printf("[INFO] launching %s * %d", v, count)
-		err = r.confirmIfNeeded("")
-		if err != nil {
-			return false, err
-		}
-
-		err = r.runHookCommands("scalingInstances", "Launching ondemand instances to recover spot instances", map[string]interface{}{
-			"change": []map[string]interface{}{
-				{
-					"count":   count,
-					"variety": v,
-				},
-			},
-		})
-		if err != nil {
-			return false, err
-		}
-
-		err = r.updateTimer("LaunchingInstances")
-		if err != nil {
-			return true, err
-		}
-
-		err = r.ec2Client.LaunchInstances(v, count, r.ami)
-		if err == nil {
-			break
-		}
+	c, err := r.config.FallbackInstanceVariety.Capacity()
+	if err != nil {
+		return false, err
 	}
+
+	count := int64(math.Ceil(totalCapacity / c))
+	log.Printf("[INFO] launching %s * %d", r.config.FallbackInstanceVariety, count)
+	err = r.confirmIfNeeded("")
+	if err != nil {
+		return false, err
+	}
+
+	err = r.runHookCommands("scalingInstances", "Launching ondemand instances to recover spot instances", map[string]interface{}{
+		"change": []map[string]interface{}{
+			{
+				"count":   count,
+				"variety": r.config.FallbackInstanceVariety,
+			},
+		},
+	})
+	if err != nil {
+		return false, err
+	}
+
+	err = r.updateTimer("LaunchingInstances")
+	if err != nil {
+		return false, err
+	}
+
+	err = r.ec2Client.LaunchInstances(r.config.FallbackInstanceVariety, count, r.ami)
 	if err != nil {
 		return false, err
 	}
@@ -303,10 +298,33 @@ func (r *Runner) scale() (bool, error) {
 	log.Printf("[INFO] totalDesiredCapacity: %f", totalDesiredCapacity)
 	r.lastTotalDesiredCapacity = totalDesiredCapacity
 
-	desiredCapacity := InstanceCapacity{}
-	for _, variety := range r.config.InstanceVarieties {
-		desiredCapacity[variety] = totalDesiredCapacity / float64(len(r.config.InstanceVarieties))
+	price, err := r.ec2Client.DescribeSpotPrices(r.config.InstanceVarieties)
+	if err != nil {
+		return false, err
 	}
+
+	availableVarieties := []InstanceVariety{}
+	for v, p := range price {
+		bid, ok := r.config.BiddingPriceByType[v.InstanceType]
+		if !ok {
+			return false, fmt.Errorf("Bidding price for %s is unknown", v.InstanceType)
+		}
+
+		if p <= bid {
+			availableVarieties = append(availableVarieties, v)
+		} else {
+			log.Printf("[DEBUG] %v is not available due to price (%f USD)", v, p)
+		}
+	}
+
+	totalSpotDesiredCapacity := totalDesiredCapacity * (float64(len(availableVarieties)) / float64(len(r.config.InstanceVarieties)))
+	totalFallbackDesiredCapacity := totalDesiredCapacity - totalSpotDesiredCapacity
+
+	desiredCapacity := InstanceCapacity{}
+	for _, variety := range availableVarieties {
+		desiredCapacity[variety] = totalSpotDesiredCapacity / float64(len(availableVarieties))
+	}
+	desiredCapacity[r.config.FallbackInstanceVariety] = totalFallbackDesiredCapacity
 	log.Println("[DEBUG] desiredCapacity:", desiredCapacity)
 
 	managedCapacity, err := InstanceCapacityFromInstances(workingInstances.Managed())

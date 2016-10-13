@@ -25,6 +25,7 @@ type EC2ClientIface interface {
 	PropagateTagsFromSIRsToInstances(reqs []*ec2.SpotInstanceRequest) error
 	CreateStatusTagsOfSIRs(reqs []*ec2.SpotInstanceRequest, status string) error
 	CancelOpenSIRs(reqs []*ec2.SpotInstanceRequest) error
+	DescribeSpotPrices(vs []InstanceVariety) (map[InstanceVariety]float64, error)
 }
 
 type EC2Client struct {
@@ -394,4 +395,43 @@ func (c *EC2Client) CreateStatusTagsOfSIRs(reqs []*ec2.SpotInstanceRequest, stat
 	}
 
 	return nil
+}
+
+func (c *EC2Client) DescribeSpotPrices(vs []InstanceVariety) (map[InstanceVariety]float64, error) {
+	res := map[InstanceVariety]float64{}
+
+	for _, v := range vs {
+		input := &ec2.DescribeSpotPriceHistoryInput{
+			AvailabilityZone:    aws.String(v.AvailabilityZone),
+			InstanceTypes:       []*string{aws.String(v.InstanceType)},
+			ProductDescriptions: []*string{aws.String("Linux/UNIX (Amazon VPC)")}, // TODO: make configurable
+		}
+
+		output, err := c.ec2.DescribeSpotPriceHistory(input)
+		if err != nil {
+			return nil, err
+		}
+
+		latestTimestamp := time.Time{}
+		latestPrice := 0.0
+		for _, p := range output.SpotPriceHistory {
+			if latestTimestamp.Before(*p.Timestamp) {
+				latestTimestamp = *p.Timestamp
+				f, err := strconv.ParseFloat(*p.SpotPrice, 64)
+				if err != nil {
+					return nil, err
+				}
+
+				latestPrice = f
+			}
+		}
+
+		if latestPrice == 0.0 {
+			return nil, fmt.Errorf("Spot price of %v is not found", v)
+		}
+
+		res[v] = latestPrice
+	}
+
+	return res, nil
 }
