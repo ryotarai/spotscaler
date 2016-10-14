@@ -302,6 +302,7 @@ func (r *Runner) scale() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	log.Printf("[DEBUG] current spot price: %v", price)
 
 	availableVarieties := []InstanceVariety{}
 	for v, p := range price {
