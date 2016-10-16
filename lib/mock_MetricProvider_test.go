@@ -8,15 +8,15 @@ type MockMetricProvider struct {
 }
 
 // Values provides a mock function with given fields: instances
-func (_m *MockMetricProvider) Values(instances Instances) ([]float64, error) {
+func (_m *MockMetricProvider) Values(instances Instances) (Metric, error) {
 	ret := _m.Called(instances)
 
-	var r0 []float64
-	if rf, ok := ret.Get(0).(func(Instances) []float64); ok {
+	var r0 Metric
+	if rf, ok := ret.Get(0).(func(Instances) Metric); ok {
 		r0 = rf(instances)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]float64)
+			r0 = ret.Get(0).(Metric)
 		}
 	}
 

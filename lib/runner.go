@@ -8,20 +8,17 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"log"
-	"math"
 	"os"
 	"strings"
 	"time"
 )
 
 type Runner struct {
-	config                   *Config
-	status                   StatusStoreIface
-	awsSession               *session.Session
-	ec2Client                EC2ClientIface
-	lastTotalDesiredCapacity float64
-	ami                      string
-	metricProvider           MetricProvider
+	config         *Config
+	status         StatusStoreIface
+	awsSession     *session.Session
+	ec2Client      EC2ClientIface
+	metricProvider MetricProvider
 }
 
 func NewRunner(config *Config) (*Runner, error) {
@@ -36,12 +33,11 @@ func NewRunner(config *Config) (*Runner, error) {
 	}
 
 	runner := &Runner{
-		config:                   config,
-		status:                   NewStatusStore(config.RedisHost, config.RedisKeyPrefix),
-		awsSession:               awsSess,
-		ec2Client:                NewEC2Client(ec2.New(awsSess), config),
-		metricProvider:           metric,
-		lastTotalDesiredCapacity: -1.0, // not set
+		config:         config,
+		status:         NewStatusStore(config.RedisHost, config.RedisKeyPrefix),
+		awsSession:     awsSess,
+		ec2Client:      NewEC2Client(ec2.New(awsSess), config),
+		metricProvider: metric,
 	}
 
 	return runner, nil
@@ -82,11 +78,6 @@ func (r *Runner) Run() error {
 		return err
 	}
 
-	err = r.prepare()
-	if err != nil {
-		return err
-	}
-
 	err = r.runExpiredTimers()
 	if err != nil {
 		return err
@@ -95,19 +86,6 @@ func (r *Runner) Run() error {
 	err = r.propagateSIRTagsToInstances()
 	if err != nil {
 		return err
-	}
-
-	recovered, err := r.recoverDeadSIRs()
-	if err != nil {
-		return err
-	}
-
-	if recovered {
-		err := r.takeCooldown()
-		if err != nil {
-			return err
-		}
-		return nil
 	}
 
 	cooldownEndsAt, err := r.status.FetchCooldownEndsAt()
@@ -133,23 +111,7 @@ func (r *Runner) Run() error {
 		return nil
 	}
 
-	err = r.terminateOndemand()
-	if err != nil {
-		return err
-	}
-
 	log.Println("[DEBUG] END Runner.Run")
-	return nil
-}
-
-func (r *Runner) prepare() error {
-	ami, err := r.findAMI()
-	if err != nil {
-		return err
-	}
-	r.ami = ami
-	log.Println("[DEBUG] ami:", ami)
-
 	return nil
 }
 
@@ -183,101 +145,6 @@ func (r *Runner) propagateSIRTagsToInstances() error {
 	return nil
 }
 
-func (r *Runner) recoverDeadSIRs() (bool, error) {
-	log.Println("[DEBUG] START: recoverDeadSIRs")
-
-	// fetch SIRs whose status is not "recovered"
-	deadSIRs, err := r.ec2Client.DescribeDeadSIRs()
-	if err != nil {
-		return false, err
-	}
-
-	if len(deadSIRs) == 0 {
-		log.Println("[INFO] no dead spot instance request is found")
-		return false, nil
-	}
-
-	log.Println("[INFO] dead spot instance requests are found")
-	log.Printf("[DEBUG] dead spot instance requests: %s", deadSIRs)
-
-	// notify hook
-	details := []map[string]string{}
-	for _, req := range deadSIRs {
-		details = append(details, map[string]string{
-			"spotInstanceRequestID": *req.SpotInstanceRequestId,
-			"statusCode":            *req.Status.Code,
-			"instanceType":          *req.LaunchSpecification.InstanceType,
-			"subnetID":              *req.LaunchSpecification.SubnetId,
-		})
-	}
-	err = r.runHookCommands("deadSpotInstanceRequests", "Some spot instance requests cannot be fulfilled or are terminated.", map[string]interface{}{
-		"spotInstanceRequests": details,
-	})
-	if err != nil {
-		return false, err
-	}
-
-	// compute total capacity of the instances
-	totalCapacity := 0.0
-	for _, req := range deadSIRs {
-		c, err := CapacityFromInstanceType(*req.LaunchSpecification.InstanceType)
-		if err != nil {
-			return false, err
-		}
-		totalCapacity += c
-	}
-	log.Printf("[DEBUG] total capacity of dead requests: %f", totalCapacity)
-
-	// launch ondemand instances which meet the capacity
-	c, err := r.config.FallbackInstanceVariety.Capacity()
-	if err != nil {
-		return false, err
-	}
-
-	count := int64(math.Ceil(totalCapacity / c))
-	log.Printf("[INFO] launching %s * %d", r.config.FallbackInstanceVariety, count)
-	err = r.confirmIfNeeded("")
-	if err != nil {
-		return false, err
-	}
-
-	err = r.runHookCommands("scalingInstances", "Launching ondemand instances to recover spot instances", map[string]interface{}{
-		"change": []map[string]interface{}{
-			{
-				"count":   count,
-				"variety": r.config.FallbackInstanceVariety,
-			},
-		},
-	})
-	if err != nil {
-		return false, err
-	}
-
-	err = r.updateTimer("LaunchingInstances")
-	if err != nil {
-		return false, err
-	}
-
-	err = r.ec2Client.LaunchInstances(r.config.FallbackInstanceVariety, count, r.ami)
-	if err != nil {
-		return false, err
-	}
-
-	// status:recovered tag to SIR
-	err = r.ec2Client.CreateStatusTagsOfSIRs(deadSIRs, "recovered")
-	if err != nil {
-		return true, err
-	}
-
-	// cancel if open
-	err = r.ec2Client.CancelOpenSIRs(deadSIRs)
-	if err != nil {
-		return true, err
-	}
-
-	return true, nil
-}
-
 func (r *Runner) scale() (bool, error) {
 	log.Println("[DEBUG] START: scale")
 
@@ -286,17 +153,15 @@ func (r *Runner) scale() (bool, error) {
 		return false, err
 	}
 
-	totalDesiredCapacity, err := r.computeTotalDesiredCapacity(workingInstances)
+	ondemandCapacity, err := workingInstances.Ondemand().Capacity()
 	if err != nil {
 		return false, err
 	}
 
-	if totalDesiredCapacity < 0 {
-		log.Println("[INFO] scaling skipped")
-		return false, nil
+	spotCapacity, err := workingInstances.Spot().Capacity()
+	if err != nil {
+		return false, err
 	}
-	log.Printf("[INFO] totalDesiredCapacity: %f", totalDesiredCapacity)
-	r.lastTotalDesiredCapacity = totalDesiredCapacity
 
 	price, err := r.ec2Client.DescribeSpotPrices(r.config.InstanceVarieties)
 	if err != nil {
@@ -318,31 +183,68 @@ func (r *Runner) scale() (bool, error) {
 		}
 	}
 
-	totalSpotDesiredCapacity := totalDesiredCapacity * (float64(len(availableVarieties)) / float64(len(r.config.InstanceVarieties)))
-	totalFallbackDesiredCapacity := totalDesiredCapacity - totalSpotDesiredCapacity
-
-	desiredCapacity := InstanceCapacity{}
-	for _, variety := range availableVarieties {
-		desiredCapacity[variety] = totalSpotDesiredCapacity / float64(len(availableVarieties))
-	}
-	desiredCapacity[r.config.FallbackInstanceVariety] = totalFallbackDesiredCapacity
-	log.Println("[DEBUG] desiredCapacity:", desiredCapacity)
-
-	managedCapacity, err := InstanceCapacityFromInstances(workingInstances.Managed())
+	schedule, err := r.getCurrentSchedule()
 	if err != nil {
 		return false, err
 	}
 
-	change := NewInstanceCapacityChange(managedCapacity, desiredCapacity)
+	var totalDesiredCapacity float64
+	if schedule == nil {
+		keepRateOfSpot := float64(len(availableVarieties)-r.config.AcceptableTermination) / float64(len(availableVarieties))
+		cpuUtilToScaleOut := r.config.MaximumCPUUtil *
+			(ondemandCapacity.Total() + spotCapacity.Total()*keepRateOfSpot) /
+			(ondemandCapacity.Total() + spotCapacity.Total())
+		cpuUtilToScaleIn := cpuUtilToScaleOut * r.config.RateOfCPUUtilToScaleIn
+		log.Printf("[DEBUG] cpu util to scale out: %f, cpu util to scale in: %f", cpuUtilToScaleOut, cpuUtilToScaleIn)
+
+		metric, err := r.metricProvider.Values(workingInstances)
+		if err != nil {
+			return false, err
+		}
+
+		log.Printf("[DEBUG] max of metric: %f, median of metric: %f", metric.Max(), metric.Median())
+
+		var cpuUtil float64
+		if metric.Max() <= cpuUtilToScaleIn {
+			log.Println("[DEBUG] scaling in")
+			cpuUtil = metric.Max()
+		} else if cpuUtilToScaleOut <= metric.Median() {
+			log.Println("[DEBUG] scaling out")
+			cpuUtil = metric.Median()
+		} else {
+			log.Println("[DEBUG] skip both scaling in and scaling out")
+		}
+
+		scalingRate := ((((2*cpuUtil*(ondemandCapacity.Total()+spotCapacity.Total()))/(r.config.MaximumCPUUtil*(1+r.config.RateOfCPUUtilToScaleIn)) - ondemandCapacity.Total()) / keepRateOfSpot) + ondemandCapacity.Total()) / (ondemandCapacity.Total() + spotCapacity.Total())
+		scalingRate = r.correctScalingRate(scalingRate)
+		log.Printf("[INFO] scaling rate: %f", scalingRate)
+
+		totalDesiredCapacity = (ondemandCapacity.Total() + spotCapacity.Total()) * scalingRate
+		totalDesiredCapacity = r.correctDesiredTotalCapacity(totalDesiredCapacity)
+	} else {
+		log.Println("[INFO] schedule found:", schedule)
+		totalDesiredCapacity = schedule.Capacity
+	}
+	log.Printf("[DEBUG] total desired capacity: %f", totalDesiredCapacity)
+
+	totalDesiredSpotCapacity := totalDesiredCapacity - ondemandCapacity.Total()
+	if totalDesiredSpotCapacity < 0.0 {
+		totalDesiredSpotCapacity = 0.0
+	}
+	log.Printf("[DEBUG] total desired spot capacity: %f", totalDesiredSpotCapacity)
+
+	desiredCapacity := InstanceCapacity{}
+	for _, v := range availableVarieties {
+		desiredCapacity[v] = totalDesiredSpotCapacity / float64(len(availableVarieties))
+	}
+	log.Printf("[INFO] desired capacity: %v", desiredCapacity)
+
+	change := NewInstanceCapacityChange(spotCapacity, desiredCapacity)
 	changeCount, err := change.Count()
 	if err != nil {
 		return false, err
 	}
-
-	log.Printf("[INFO] change count: %s", changeCount)
-	if len(changeCount) == 0 {
-		return false, nil
-	}
+	log.Printf("[INFO] change count: %v", changeCount)
 
 	err = r.confirmIfNeeded("")
 	if err != nil {
@@ -363,6 +265,11 @@ func (r *Runner) scale() (bool, error) {
 		return false, err
 	}
 
+	ami, err := r.config.AMICommand.Output([]string{})
+	if err != nil {
+		return false, err
+	}
+
 	for v, c := range changeCount {
 		var err error
 		err = r.confirmIfNeeded(fmt.Sprintf("%s * %d", v, c))
@@ -376,7 +283,7 @@ func (r *Runner) scale() (bool, error) {
 				return true, err
 			}
 
-			err = r.ec2Client.LaunchInstances(v, c, r.ami)
+			err = r.ec2Client.LaunchInstances(v, c, ami)
 			if err != nil {
 				return true, err
 			}
@@ -389,117 +296,6 @@ func (r *Runner) scale() (bool, error) {
 	}
 
 	return true, nil
-}
-
-func (r *Runner) computeTotalDesiredCapacity(instances Instances) (float64, error) {
-	schedule, err := r.getCurrentSchedule()
-	if err != nil {
-		return -1.0, err
-	}
-
-	if schedule != nil {
-		log.Println("[INFO] schedule found:", schedule)
-		return schedule.Capacity, nil
-	}
-
-	values, err := r.metricProvider.Values(instances)
-	if err != nil {
-		return -1.0, err
-	}
-	log.Printf("[DEBUG] metric values: %s", values)
-
-	scalingRate := 1.0
-	for _, p := range r.config.ScalingPolicies {
-		scalingRate, err = p.Rate(values)
-		if err != nil {
-			return -1.0, err
-		}
-
-		if scalingRate != 1.0 { // policy matched
-			log.Println("[DEBUG] scalingRate:", scalingRate)
-			scalingRate = r.correctScalingRate(scalingRate)
-			break
-		}
-	}
-
-	if scalingRate == 1.0 {
-		// no policy matched
-		return -1.0, nil
-	}
-
-	managedCapacity, err := InstanceCapacityFromInstances(instances.Managed())
-	if err != nil {
-		return -1.0, err
-	}
-	log.Println("[DEBUG] managedCapacity:", managedCapacity)
-
-	workingCapacity, err := InstanceCapacityFromInstances(instances)
-	if err != nil {
-		return -1.0, err
-	}
-	log.Println("[DEBUG] workingCapacity:", workingCapacity)
-
-	totalDesiredCapacity := (workingCapacity.Total() * scalingRate) - (workingCapacity.Total() - managedCapacity.Total())
-	totalDesiredCapacity = r.correctDesiredTotalCapacity(totalDesiredCapacity)
-
-	return totalDesiredCapacity, nil
-}
-
-func (r *Runner) terminateOndemand() error {
-	log.Println("[DEBUG] START: terminateOndemand")
-	if r.lastTotalDesiredCapacity < 0 {
-		log.Println("[DEBUG] lastTotalDesiredCapacity is not set")
-		return nil
-	}
-
-	workingInstances, err := r.ec2Client.DescribeWorkingInstances()
-	if err != nil {
-		return err
-	}
-
-	managed := workingInstances.Managed()
-	managedCapacity, err := InstanceCapacityFromInstances(managed)
-	if err != nil {
-		return err
-	}
-
-	gap := managedCapacity.Total() - r.lastTotalDesiredCapacity
-	if gap <= 0 {
-		log.Println("[DEBUG] no ondemand instance will be terminated")
-		return nil
-	}
-	log.Printf("[DEBUG] gap between managed capacity and desired capacity: %f", gap)
-
-	termination := Instances{}
-	for _, i := range managed.Ondemand() {
-		cap, err := i.Variety().Capacity()
-		if err != nil {
-			return err
-		}
-
-		if gap >= cap {
-			termination = append(termination, i)
-			gap -= cap
-		}
-	}
-
-	if len(termination) == 0 {
-		log.Println("[DEBUG] no ondemand instance will be terminated")
-		return nil
-	}
-
-	log.Printf("[INFO] the following ondemand instances will be terminated: %s", termination)
-	err = r.confirmIfNeeded("")
-	if err != nil {
-		return err
-	}
-
-	err = r.ec2Client.TerminateInstances(termination)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (r *Runner) takeCooldown() error {
@@ -620,11 +416,6 @@ func (r *Runner) runExpiredTimers() error {
 		}
 	}
 	return nil
-}
-
-func (r *Runner) findAMI() (string, error) {
-	ami, err := r.config.AMICommand.Output([]string{})
-	return ami, err
 }
 
 func (r *Runner) confirmIfNeeded(msg string) error {

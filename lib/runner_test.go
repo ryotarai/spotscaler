@@ -9,14 +9,13 @@ import (
 
 func configForTest() *Config {
 	c := &Config{
+		AMICommand: Command{
+			Command: "echo",
+			Args:    []string{"-n", "ami-abc"},
+		},
 		InstanceCapacityByType: map[string]float64{
 			"c4.large": 10,
 			"m4.large": 5,
-		},
-		FallbackInstanceVariety: InstanceVariety{
-			InstanceType: "m4.large",
-			SubnetID:     "subnet-abc",
-			LaunchMethod: "ondemand",
 		},
 		InstanceVarieties: []InstanceVariety{
 			{
@@ -29,19 +28,20 @@ func configForTest() *Config {
 				SubnetID:     "subnet-abc",
 				LaunchMethod: "spot",
 			},
-		},
-		ScalingPolicies: []ScalingPolicy{
 			{
-				If:         "greaterThan",
-				Threshold:  5,
-				Target:     3,
-				MetricType: "median",
+				InstanceType: "r3.large",
+				SubnetID:     "subnet-abc",
+				LaunchMethod: "spot",
 			},
 		},
 		BiddingPriceByType: map[string]float64{
 			"c4.large": 0.3,
 			"m4.large": 0.3,
+			"r3.large": 0.3,
 		},
+		AcceptableTermination:  1,
+		RateOfCPUUtilToScaleIn: 0.5,
+		MaximumCPUUtil:         80,
 	}
 	SetCapacityTable(c.InstanceCapacityByType)
 	return c
@@ -65,70 +65,46 @@ func TestPropagateSIRTagsToInstances(t *testing.T) {
 	ec2Client.AssertExpectations(t)
 }
 
-func TestRecoverDeadSIRs(t *testing.T) {
+func TestScaleOut(t *testing.T) {
 	config := configForTest()
-	reqs := []*ec2.SpotInstanceRequest{
-		{
-			SpotInstanceRequestId: aws.String("sir-abc"),
-			LaunchSpecification: &ec2.LaunchSpecification{
-				InstanceType: aws.String("c4.large"),
-				SubnetId:     aws.String("subnet-dummy"),
-			},
-			Status: &ec2.SpotInstanceStatus{
-				Code: aws.String("dummy"),
-			},
-		},
-	}
-
-	ec2Client := new(MockEC2ClientIface)
-	ec2Client.On("DescribeDeadSIRs").Return(reqs, nil)
-	ec2Client.On("LaunchInstances", config.FallbackInstanceVariety, int64(2), "ami-abc").Return(nil)
-	ec2Client.On("CreateStatusTagsOfSIRs", reqs, "recovered").Return(nil)
-	ec2Client.On("CancelOpenSIRs", reqs).Return(nil)
-
-	r := &Runner{
-		config:    config,
-		ec2Client: ec2Client,
-		ami:       "ami-abc",
-	}
-	recovered, err := r.recoverDeadSIRs()
-	assert.True(t, recovered)
-	assert.NoError(t, err)
-	ec2Client.AssertExpectations(t)
-}
-
-func TestScale(t *testing.T) {
-	config := configForTest()
-	instance := Instance{
-		Instance: ec2.Instance{
-			InstanceId:   aws.String("i-abc"),
-			InstanceType: aws.String("c4.large"),
-			SubnetId:     aws.String("subnet-abc"),
-		},
-	}
 	instances := Instances{
-		&instance,
+		{
+			Instance: ec2.Instance{
+				InstanceId:            aws.String("i-abc"),
+				InstanceType:          aws.String("c4.large"),
+				SubnetId:              aws.String("subnet-abc"),
+				SpotInstanceRequestId: nil, // ondemand
+			},
+		},
+		{
+			Instance: ec2.Instance{
+				InstanceId:            aws.String("i-abc"),
+				InstanceType:          aws.String("c4.large"),
+				SubnetId:              aws.String("subnet-abc"),
+				SpotInstanceRequestId: aws.String("sir-abc"), // spot
+			},
+		},
 	}
 
 	ec2Client := new(MockEC2ClientIface)
 	ec2Client.On("DescribeWorkingInstances").Return(instances, nil)
 	ec2Client.On("DescribeSpotPrices", config.InstanceVarieties).Return(map[InstanceVariety]float64{
 		config.InstanceVarieties[0]: 0.1,
-		config.InstanceVarieties[1]: 10, // too high
+		config.InstanceVarieties[1]: 0.1,
+		config.InstanceVarieties[2]: 10, // too high
 	}, nil)
 	ec2Client.On("LaunchInstances", config.InstanceVarieties[0], int64(1), "ami-abc").Return(nil)
-	ec2Client.On("LaunchInstances", config.FallbackInstanceVariety, int64(1), "ami-abc").Return(nil)
+	ec2Client.On("LaunchInstances", config.InstanceVarieties[1], int64(4), "ami-abc").Return(nil)
 
 	statusStore := new(MockStatusStoreIface)
 	statusStore.On("ListSchedules").Return([]*Schedule{}, nil)
 
 	metricProvider := new(MockMetricProvider)
-	metricProvider.On("Values", instances).Return([]float64{3, 4, 5, 6, 7, 8, 9}, nil)
+	metricProvider.On("Values", instances).Return(Metric{89, 89, 90, 91, 91}, nil)
 
 	r := &Runner{
 		config:         config,
 		ec2Client:      ec2Client,
-		ami:            "ami-abc",
 		status:         statusStore,
 		metricProvider: metricProvider,
 	}
@@ -138,14 +114,15 @@ func TestScale(t *testing.T) {
 	ec2Client.AssertExpectations(t)
 }
 
-func TestTerminateOndemand(t *testing.T) {
+func TestScaleIn(t *testing.T) {
 	config := configForTest()
 	instances := Instances{
 		{
 			Instance: ec2.Instance{
-				InstanceId:   aws.String("i-abc"),
-				InstanceType: aws.String("c4.large"),
-				SubnetId:     aws.String("subnet-abc"),
+				InstanceId:            aws.String("i-abc"),
+				InstanceType:          aws.String("c4.large"),
+				SubnetId:              aws.String("subnet-abc"),
+				SpotInstanceRequestId: nil, // ondemand
 				Tags: []*ec2.Tag{
 					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler")},
 				},
@@ -153,9 +130,10 @@ func TestTerminateOndemand(t *testing.T) {
 		},
 		{
 			Instance: ec2.Instance{
-				InstanceId:   aws.String("i-bcd"),
-				InstanceType: aws.String("c4.large"),
-				SubnetId:     aws.String("subnet-abc"),
+				InstanceId:            aws.String("i-abc"),
+				InstanceType:          aws.String("c4.large"),
+				SubnetId:              aws.String("subnet-abc"),
+				SpotInstanceRequestId: aws.String("sir-abc"), // spot
 				Tags: []*ec2.Tag{
 					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler")},
 				},
@@ -165,15 +143,27 @@ func TestTerminateOndemand(t *testing.T) {
 
 	ec2Client := new(MockEC2ClientIface)
 	ec2Client.On("DescribeWorkingInstances").Return(instances, nil)
-	ec2Client.On("TerminateInstances", Instances{instances[0]}).Return(nil)
+	ec2Client.On("DescribeSpotPrices", config.InstanceVarieties).Return(map[InstanceVariety]float64{
+		config.InstanceVarieties[0]: 0.1,
+		config.InstanceVarieties[1]: 0.1,
+		config.InstanceVarieties[2]: 10, // too high
+	}, nil)
+	ec2Client.On("TerminateInstancesByCount", instances, config.InstanceVarieties[0], int64(1)).Return(nil)
+
+	statusStore := new(MockStatusStoreIface)
+	statusStore.On("ListSchedules").Return([]*Schedule{}, nil)
+
+	metricProvider := new(MockMetricProvider)
+	metricProvider.On("Values", instances).Return(Metric{10, 10, 10, 10, 15}, nil)
 
 	r := &Runner{
-		config:    config,
-		ec2Client: ec2Client,
-		ami:       "ami-abc",
-		lastTotalDesiredCapacity: 10.0,
+		config:         config,
+		ec2Client:      ec2Client,
+		status:         statusStore,
+		metricProvider: metricProvider,
 	}
-	err := r.terminateOndemand()
+	scaled, err := r.scale()
+	assert.True(t, scaled)
 	assert.NoError(t, err)
 	ec2Client.AssertExpectations(t)
 }

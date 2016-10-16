@@ -27,15 +27,3 @@ func CapacityFromInstanceType(t string) (float64, error) {
 	}
 	return cap, nil
 }
-
-func InstanceCapacityFromInstances(instances Instances) (InstanceCapacity, error) {
-	c := InstanceCapacity{}
-	for _, i := range instances {
-		cap, err := CapacityFromInstanceType(*i.InstanceType)
-		if err != nil {
-			return nil, err
-		}
-		c[i.Variety()] += cap
-	}
-	return c, nil
-}

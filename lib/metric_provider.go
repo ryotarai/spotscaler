@@ -7,11 +7,24 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"sort"
 	"time"
 )
 
+type Metric []float64
+
+func (m Metric) Max() float64 {
+	sort.Float64s(m)
+	return m[len(m)-1]
+}
+
+func (m Metric) Median() float64 {
+	sort.Float64s(m)
+	return m[len(m)/2]
+}
+
 type MetricProvider interface {
-	Values(instances Instances) ([]float64, error)
+	Values(instances Instances) (Metric, error)
 }
 
 func NewMetricProvider(t string, awsSession *session.Session) (MetricProvider, error) {
@@ -33,11 +46,11 @@ func NewCloudWatchEC2MetricProvider(awsSession *session.Session) (*CloudWatchEC2
 	}, nil
 }
 
-func (p *CloudWatchEC2MetricProvider) Values(instances Instances) ([]float64, error) {
+func (p *CloudWatchEC2MetricProvider) Values(instances Instances) (Metric, error) {
 	period := 60           // TODO
 	duration := 5 * period // TODO: configurable
 
-	utils := []float64{}
+	utils := Metric{}
 	for _, i := range instances {
 		if *i.Monitoring.State != ec2.MonitoringStateEnabled {
 			continue

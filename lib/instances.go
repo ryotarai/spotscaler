@@ -28,3 +28,26 @@ func (is Instances) Ondemand() Instances {
 
 	return instances
 }
+
+func (is Instances) Spot() Instances {
+	instances := Instances{}
+	for _, i := range is {
+		if i.SpotInstanceRequestId != nil {
+			instances = append(instances, i)
+		}
+	}
+
+	return instances
+}
+
+func (is Instances) Capacity() (InstanceCapacity, error) {
+	c := InstanceCapacity{}
+	for _, i := range is {
+		cap, err := CapacityFromInstanceType(*i.InstanceType)
+		if err != nil {
+			return nil, err
+		}
+		c[i.Variety()] += cap
+	}
+	return c, nil
+}
