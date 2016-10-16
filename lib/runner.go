@@ -218,6 +218,7 @@ func (r *Runner) scale() (bool, error) {
 		scalingRate := ((((2*cpuUtil*(ondemandCapacity.Total()+spotCapacity.Total()))/(r.config.MaximumCPUUtil*(1+r.config.RateOfCPUUtilToScaleIn)) - ondemandCapacity.Total()) / keepRateOfSpot) + ondemandCapacity.Total()) / (ondemandCapacity.Total() + spotCapacity.Total())
 		scalingRate = r.correctScalingRate(scalingRate)
 		log.Printf("[INFO] scaling rate: %f", scalingRate)
+		log.Printf("[INFO] expected CPU util after scaling: %f", cpuUtil/scalingRate)
 
 		totalDesiredCapacity = (ondemandCapacity.Total() + spotCapacity.Total()) * scalingRate
 		totalDesiredCapacity = r.correctDesiredTotalCapacity(totalDesiredCapacity)
