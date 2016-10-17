@@ -250,6 +250,11 @@ func (r *Runner) scale() (bool, error) {
 	}
 	log.Printf("[INFO] change count: %v", changeCount)
 
+	if len(changeCount) == 0 {
+		log.Println("[INFO] no change")
+		return false, nil
+	}
+
 	err = r.confirmIfNeeded("")
 	if err != nil {
 		return false, err
