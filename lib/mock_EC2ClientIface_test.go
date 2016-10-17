@@ -8,20 +8,6 @@ type MockEC2ClientIface struct {
 	mock.Mock
 }
 
-// CancelOpenSIRs provides a mock function with given fields: reqs
-func (_m *MockEC2ClientIface) CancelOpenSIRs(reqs []*ec2.SpotInstanceRequest) error {
-	ret := _m.Called(reqs)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func([]*ec2.SpotInstanceRequest) error); ok {
-		r0 = rf(reqs)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // CreateStatusTagsOfSIRs provides a mock function with given fields: reqs, status
 func (_m *MockEC2ClientIface) CreateStatusTagsOfSIRs(reqs []*ec2.SpotInstanceRequest, status string) error {
 	ret := _m.Called(reqs, status)
@@ -34,29 +20,6 @@ func (_m *MockEC2ClientIface) CreateStatusTagsOfSIRs(reqs []*ec2.SpotInstanceReq
 	}
 
 	return r0
-}
-
-// DescribeDeadSIRs provides a mock function with given fields:
-func (_m *MockEC2ClientIface) DescribeDeadSIRs() ([]*ec2.SpotInstanceRequest, error) {
-	ret := _m.Called()
-
-	var r0 []*ec2.SpotInstanceRequest
-	if rf, ok := ret.Get(0).(func() []*ec2.SpotInstanceRequest); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*ec2.SpotInstanceRequest)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
 }
 
 // DescribePendingAndActiveSIRs provides a mock function with given fields:

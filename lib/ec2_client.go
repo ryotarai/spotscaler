@@ -21,10 +21,8 @@ type EC2ClientIface interface {
 	DescribeWorkingInstances() (Instances, error)
 
 	DescribePendingAndActiveSIRs() ([]*ec2.SpotInstanceRequest, error)
-	DescribeDeadSIRs() ([]*ec2.SpotInstanceRequest, error)
 	PropagateTagsFromSIRsToInstances(reqs []*ec2.SpotInstanceRequest) error
 	CreateStatusTagsOfSIRs(reqs []*ec2.SpotInstanceRequest, status string) error
-	CancelOpenSIRs(reqs []*ec2.SpotInstanceRequest) error
 	DescribeSpotPrices(vs []InstanceVariety) (map[InstanceVariety]float64, error)
 }
 
@@ -282,77 +280,6 @@ func (c *EC2Client) DescribePendingAndActiveSIRs() ([]*ec2.SpotInstanceRequest, 
 	}
 
 	return resp.SpotInstanceRequests, nil
-}
-
-func (c *EC2Client) DescribeDeadSIRs() ([]*ec2.SpotInstanceRequest, error) {
-	params := &ec2.DescribeSpotInstanceRequestsInput{
-		Filters: []*ec2.Filter{
-			{
-				Name:   aws.String("tag:RequestedBy"),
-				Values: []*string{aws.String("spot-autoscaler")},
-			}, {
-				Name:   aws.String("tag:spot-autoscaler:Status"),
-				Values: []*string{aws.String("pending"), aws.String("completed")},
-			},
-		},
-	}
-
-	resp, err := c.ec2.DescribeSpotInstanceRequests(params)
-	if err != nil {
-		return nil, err
-	}
-
-	pendingStatusCodes := []string{"pending-evaluation", "pending-fulfillment"}
-	terminatedStatueCodes := []string{"bad-parameters", "system-error", "marked-for-termination", "instance-terminated-by-price", "instance-terminated-no-capacity", "instance-terminated-capacity-oversubscribed", "instance-terminated-launch-group-constraint"}
-
-	deadSIRs := []*ec2.SpotInstanceRequest{}
-	for _, req := range resp.SpotInstanceRequests {
-		fulfilledByTag := findEC2TagByKey(req.Tags, "spot-autoscaler:FulfilledBy")
-		if fulfilledByTag == nil {
-			return nil, fmt.Errorf("spot-autoscaler:FulfilledBy tag is not found in %s", *req.SpotInstanceRequestId)
-		}
-
-		unixTime, err := strconv.Atoi(*fulfilledByTag.Value)
-		if err != nil {
-			return nil, err
-		}
-
-		fulfilledBy := time.Unix(int64(unixTime), 0)
-
-		if (*req.State == "open" && time.Now().After(fulfilledBy)) ||
-			(*req.State == "open" && indexOfStringInSlice(pendingStatusCodes, *req.Status.Code) < 0) ||
-			indexOfStringInSlice(terminatedStatueCodes, *req.Status.Code) >= 0 {
-			deadSIRs = append(deadSIRs, req)
-		}
-	}
-
-	return deadSIRs, nil
-}
-
-func (c *EC2Client) CancelOpenSIRs(reqs []*ec2.SpotInstanceRequest) error {
-	ids := []*string{}
-
-	for _, req := range reqs {
-		if *req.State == "open" {
-			ids = append(ids, req.SpotInstanceRequestId)
-		}
-	}
-
-	if len(ids) == 0 {
-		return nil
-	}
-
-	cancelParams := &ec2.CancelSpotInstanceRequestsInput{
-		DryRun:                 aws.Bool(c.config.DryRun),
-		SpotInstanceRequestIds: ids,
-	}
-	log.Printf("[DEBUG] CancelSpotInstanceRequests: %s", cancelParams)
-	_, err := c.ec2.CancelSpotInstanceRequests(cancelParams)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (c *EC2Client) PropagateTagsFromSIRsToInstances(reqs []*ec2.SpotInstanceRequest) error {
