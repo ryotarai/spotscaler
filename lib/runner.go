@@ -197,6 +197,11 @@ func (r *Runner) scale() error {
 			log.Printf("[DEBUG] %v is not available due to price (%f USD)", v, p)
 		}
 	}
+	log.Printf("[DEBUG] %d spot varieties are available", len(availableVarieties))
+
+	if len(availableVarieties)-r.config.AcceptableTermination <= 0 {
+		log.Printf("[ERROR] available varieties are too few against acceptable termination (%d)", r.config.AcceptableTermination)
+	}
 
 	schedule, err := r.getCurrentSchedule()
 	if err != nil {

@@ -368,7 +368,8 @@ func (c *EC2Client) DescribeSpotPrices(vs []InstanceVariety) (map[InstanceVariet
 			}
 
 			if latestPrice == 0.0 {
-				return nil, fmt.Errorf("Spot price of %v is not found", v)
+				log.Printf("[WARN] Spot price of %v is not found", v)
+				continue
 			}
 
 			res[v] = latestPrice
