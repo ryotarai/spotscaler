@@ -15,7 +15,7 @@ func configForTest() *Config {
 		},
 		InstanceCapacityByType: map[string]float64{
 			"c4.large": 10,
-			"m4.large": 5,
+			"m4.large": 10,
 		},
 		InstanceVarieties: []InstanceVariety{
 			{
@@ -94,7 +94,7 @@ func TestScaleOut(t *testing.T) {
 		config.InstanceVarieties[2]: 10, // too high
 	}, nil)
 	ec2Client.On("LaunchInstances", config.InstanceVarieties[0], int64(1), "ami-abc").Return(nil)
-	ec2Client.On("LaunchInstances", config.InstanceVarieties[1], int64(4), "ami-abc").Return(nil)
+	ec2Client.On("LaunchInstances", config.InstanceVarieties[1], int64(2), "ami-abc").Return(nil)
 
 	statusStore := new(MockStatusStoreIface)
 	statusStore.On("ListSchedules").Return([]*Schedule{}, nil)
@@ -119,10 +119,10 @@ func TestScaleIn(t *testing.T) {
 	instances := Instances{
 		{
 			Instance: ec2.Instance{
-				InstanceId:            aws.String("i-abc"),
-				InstanceType:          aws.String("c4.large"),
+				InstanceId:            aws.String("i-1"),
+				InstanceType:          aws.String("m4.large"),
 				SubnetId:              aws.String("subnet-abc"),
-				SpotInstanceRequestId: nil, // ondemand
+				SpotInstanceRequestId: aws.String("sir-abc"), // spot
 				Tags: []*ec2.Tag{
 					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler")},
 				},
@@ -130,7 +130,18 @@ func TestScaleIn(t *testing.T) {
 		},
 		{
 			Instance: ec2.Instance{
-				InstanceId:            aws.String("i-abc"),
+				InstanceId:            aws.String("i-2"),
+				InstanceType:          aws.String("c4.large"),
+				SubnetId:              aws.String("subnet-abc"),
+				SpotInstanceRequestId: aws.String("sir-abc"), // spot
+				Tags: []*ec2.Tag{
+					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler")},
+				},
+			},
+		},
+		{
+			Instance: ec2.Instance{
+				InstanceId:            aws.String("i-3"),
 				InstanceType:          aws.String("c4.large"),
 				SubnetId:              aws.String("subnet-abc"),
 				SpotInstanceRequestId: aws.String("sir-abc"), // spot

@@ -157,11 +157,13 @@ func (r *Runner) scale() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	log.Printf("[DEBUG] ondemand capacity: %f", ondemandCapacity.Total())
 
 	spotCapacity, err := workingInstances.Spot().Capacity()
 	if err != nil {
 		return false, err
 	}
+	log.Printf("[DEBUG] spot capacity: %f", ondemandCapacity.Total())
 
 	price, err := r.ec2Client.DescribeSpotPrices(r.config.InstanceVarieties)
 	if err != nil {
@@ -230,6 +232,7 @@ func (r *Runner) scale() (bool, error) {
 
 	totalDesiredSpotCapacity := totalDesiredCapacity - ondemandCapacity.Total()
 	if totalDesiredSpotCapacity < 0.0 {
+		log.Printf("[DEBUG] total desired spot capacity (%f) is less than 0, fixing it to 0 forcibly", totalDesiredSpotCapacity)
 		totalDesiredSpotCapacity = 0.0
 	}
 	log.Printf("[DEBUG] total desired spot capacity: %f", totalDesiredSpotCapacity)
