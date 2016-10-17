@@ -4,11 +4,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"testing"
+	"time"
 )
 
 func configForTest() *Config {
 	c := &Config{
+		Cooldown: "5m",
 		AMICommand: Command{
 			Command: "echo",
 			Args:    []string{"-n", "ami-abc"},
@@ -98,6 +101,8 @@ func TestScaleOut(t *testing.T) {
 
 	statusStore := new(MockStatusStoreIface)
 	statusStore.On("ListSchedules").Return([]*Schedule{}, nil)
+	statusStore.On("FetchCooldownEndsAt").Return(time.Time{}, nil)
+	statusStore.On("StoreCooldownEndsAt", mock.AnythingOfType("time.Time")).Return(nil)
 
 	metricProvider := new(MockMetricProvider)
 	metricProvider.On("Values", instances).Return(Metric{89, 89, 90, 91, 91}, nil)
@@ -108,8 +113,7 @@ func TestScaleOut(t *testing.T) {
 		status:         statusStore,
 		metricProvider: metricProvider,
 	}
-	scaled, err := r.scale()
-	assert.True(t, scaled)
+	err := r.scale()
 	assert.NoError(t, err)
 	ec2Client.AssertExpectations(t)
 }
@@ -163,6 +167,8 @@ func TestScaleIn(t *testing.T) {
 
 	statusStore := new(MockStatusStoreIface)
 	statusStore.On("ListSchedules").Return([]*Schedule{}, nil)
+	statusStore.On("FetchCooldownEndsAt").Return(time.Time{}, nil)
+	statusStore.On("StoreCooldownEndsAt", mock.AnythingOfType("time.Time")).Return(nil)
 
 	metricProvider := new(MockMetricProvider)
 	metricProvider.On("Values", instances).Return(Metric{10, 10, 10, 10, 15}, nil)
@@ -173,8 +179,7 @@ func TestScaleIn(t *testing.T) {
 		status:         statusStore,
 		metricProvider: metricProvider,
 	}
-	scaled, err := r.scale()
-	assert.True(t, scaled)
+	err := r.scale()
 	assert.NoError(t, err)
 	ec2Client.AssertExpectations(t)
 }

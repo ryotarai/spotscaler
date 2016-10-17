@@ -98,17 +98,9 @@ func (r *Runner) Run() error {
 		return nil
 	}
 
-	scaled, err := r.scale()
+	err = r.scale()
 	if err != nil {
 		return err
-	}
-
-	if scaled {
-		err := r.takeCooldown()
-		if err != nil {
-			return err
-		}
-		return nil
 	}
 
 	log.Println("[DEBUG] END Runner.Run")
@@ -145,29 +137,29 @@ func (r *Runner) propagateSIRTagsToInstances() error {
 	return nil
 }
 
-func (r *Runner) scale() (bool, error) {
+func (r *Runner) scale() error {
 	log.Println("[DEBUG] START: scale")
 
 	workingInstances, err := r.ec2Client.DescribeWorkingInstances()
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	ondemandCapacity, err := workingInstances.Ondemand().Capacity()
 	if err != nil {
-		return false, err
+		return err
 	}
 	log.Printf("[DEBUG] ondemand capacity: %f", ondemandCapacity.Total())
 
 	spotCapacity, err := workingInstances.Spot().Capacity()
 	if err != nil {
-		return false, err
+		return err
 	}
 	log.Printf("[DEBUG] spot capacity: %f", ondemandCapacity.Total())
 
 	price, err := r.ec2Client.DescribeSpotPrices(r.config.InstanceVarieties)
 	if err != nil {
-		return false, err
+		return err
 	}
 	log.Printf("[DEBUG] current spot price: %v", price)
 
@@ -175,7 +167,7 @@ func (r *Runner) scale() (bool, error) {
 	for v, p := range price {
 		bid, ok := r.config.BiddingPriceByType[v.InstanceType]
 		if !ok {
-			return false, fmt.Errorf("Bidding price for %s is unknown", v.InstanceType)
+			return fmt.Errorf("Bidding price for %s is unknown", v.InstanceType)
 		}
 
 		if p <= bid {
@@ -187,7 +179,7 @@ func (r *Runner) scale() (bool, error) {
 
 	schedule, err := r.getCurrentSchedule()
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	var totalDesiredCapacity float64
@@ -201,7 +193,7 @@ func (r *Runner) scale() (bool, error) {
 
 		metric, err := r.metricProvider.Values(workingInstances)
 		if err != nil {
-			return false, err
+			return err
 		}
 
 		log.Printf("[DEBUG] max of metric: %f, median of metric: %f", metric.Max(), metric.Median())
@@ -246,18 +238,18 @@ func (r *Runner) scale() (bool, error) {
 	change := NewInstanceCapacityChange(spotCapacity, desiredCapacity)
 	changeCount, err := change.Count()
 	if err != nil {
-		return false, err
+		return err
 	}
 	log.Printf("[INFO] change count: %v", changeCount)
 
 	if len(changeCount) == 0 {
 		log.Println("[INFO] no change")
-		return false, nil
+		return nil
 	}
 
 	err = r.confirmIfNeeded("")
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	eventDetails := []map[string]interface{}{}
@@ -271,40 +263,45 @@ func (r *Runner) scale() (bool, error) {
 		"change": eventDetails,
 	})
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	ami, err := r.config.AMICommand.Output([]string{})
 	if err != nil {
-		return false, err
+		return err
+	}
+
+	err = r.takeCooldown()
+	if err != nil {
+		return err
 	}
 
 	for v, c := range changeCount {
 		var err error
 		err = r.confirmIfNeeded(fmt.Sprintf("%s * %d", v, c))
 		if err != nil {
-			return false, err
+			return err
 		}
 
 		if c > 0 {
 			err = r.updateTimer("LaunchingInstances")
 			if err != nil {
-				return true, err
+				return err
 			}
 
 			err = r.ec2Client.LaunchInstances(v, c, ami)
 			if err != nil {
-				return true, err
+				return err
 			}
 		} else if c < 0 {
 			err = r.ec2Client.TerminateInstancesByCount(workingInstances.Managed(), v, c*-1)
 			if err != nil {
-				return true, err
+				return err
 			}
 		}
 	}
 
-	return true, nil
+	return nil
 }
 
 func (r *Runner) takeCooldown() error {
