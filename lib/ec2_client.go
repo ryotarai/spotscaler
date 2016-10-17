@@ -62,6 +62,7 @@ func (c *EC2Client) TerminateInstances(instances Instances) error {
 	}
 
 	params := &ec2.CreateTagsInput{
+		DryRun:    aws.Bool(c.config.DryRun),
 		Resources: ids,
 		Tags:      c.config.TerminateTags.SDK(),
 	}
@@ -94,6 +95,7 @@ func (c *EC2Client) LaunchOndemandInstances(v InstanceVariety, count int64, ami 
 	userData := base64.StdEncoding.EncodeToString([]byte(c.config.LaunchConfiguration.UserData))
 
 	params := &ec2.RunInstancesInput{
+		DryRun:           aws.Bool(c.config.DryRun),
 		ImageId:          aws.String(ami),
 		MaxCount:         aws.Int64(count),
 		MinCount:         aws.Int64(count),
@@ -132,6 +134,7 @@ func (c *EC2Client) LaunchOndemandInstances(v InstanceVariety, count int64, ami 
 	tags = append(tags, c.config.InstanceTags.SDK()...)
 
 	createTagsParams := &ec2.CreateTagsInput{
+		DryRun:    aws.Bool(c.config.DryRun),
 		Resources: instanceIDs,
 		Tags:      tags,
 	}
@@ -157,6 +160,7 @@ func (c *EC2Client) LaunchSpotInstances(v InstanceVariety, count int64, ami stri
 	userData := base64.StdEncoding.EncodeToString([]byte(c.config.LaunchConfiguration.UserData))
 
 	requestSpotInstancesParams := &ec2.RequestSpotInstancesInput{
+		DryRun:        aws.Bool(c.config.DryRun),
 		SpotPrice:     aws.String(fmt.Sprintf("%f", biddingPrice)),
 		InstanceCount: aws.Int64(count),
 		LaunchSpecification: &ec2.RequestSpotLaunchSpecification{
@@ -207,6 +211,7 @@ func (c *EC2Client) LaunchSpotInstances(v InstanceVariety, count int64, ami stri
 	}
 
 	createTagsParams := &ec2.CreateTagsInput{
+		DryRun:    aws.Bool(c.config.DryRun),
 		Resources: ids,
 		Tags:      tags,
 	}
@@ -338,6 +343,7 @@ func (c *EC2Client) CancelOpenSIRs(reqs []*ec2.SpotInstanceRequest) error {
 	}
 
 	cancelParams := &ec2.CancelSpotInstanceRequestsInput{
+		DryRun:                 aws.Bool(c.config.DryRun),
 		SpotInstanceRequestIds: ids,
 	}
 	log.Printf("[DEBUG] CancelSpotInstanceRequests: %s", cancelParams)
@@ -360,6 +366,7 @@ func (c *EC2Client) PropagateTagsFromSIRsToInstances(reqs []*ec2.SpotInstanceReq
 		}
 
 		createTagsParams := &ec2.CreateTagsInput{
+			DryRun:    aws.Bool(c.config.DryRun),
 			Resources: []*string{req.InstanceId},
 			Tags:      tags,
 		}
@@ -382,6 +389,7 @@ func (c *EC2Client) CreateStatusTagsOfSIRs(reqs []*ec2.SpotInstanceRequest, stat
 	}
 
 	createTagsParams := &ec2.CreateTagsInput{
+		DryRun:    aws.Bool(c.config.DryRun),
 		Resources: ids,
 		Tags: []*ec2.Tag{
 			{Key: aws.String("spot-autoscaler:Status"), Value: aws.String(status)},

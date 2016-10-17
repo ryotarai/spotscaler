@@ -20,6 +20,7 @@ func StartCLI() int {
 	server := flag.String("server", "", "start API server")
 	version := flag.Bool("version", false, "show version")
 	logLevel := flag.String("log-level", "DEBUG", "log level (one of DEBUG, INFO, WARN and ERROR)")
+	dryRun := flag.Bool("dry-run", false, "dry run mode")
 	flag.Parse()
 
 	SetLogLevel(*logLevel)
@@ -41,6 +42,9 @@ func StartCLI() int {
 	}
 	if *confirmBeforeAction {
 		config.ConfirmBeforeAction = *confirmBeforeAction
+	}
+	if *dryRun {
+		config.DryRun = *dryRun
 	}
 
 	err = config.Validate()
