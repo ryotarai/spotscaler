@@ -207,6 +207,7 @@ func (r *Runner) scale() error {
 			cpuUtil = metric.Median()
 		} else {
 			log.Println("[DEBUG] skip both scaling in and scaling out")
+			return nil
 		}
 
 		scalingRate := ((((2*cpuUtil*(ondemandCapacity.Total()+spotCapacity.Total()))/(r.config.MaximumCPUUtil*(1+r.config.RateOfCPUUtilToScaleIn)) - ondemandCapacity.Total()) / keepRateOfSpot) + ondemandCapacity.Total()) / (ondemandCapacity.Total() + spotCapacity.Total())
