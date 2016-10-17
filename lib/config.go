@@ -33,7 +33,7 @@ type Config struct {
 	MaximumCPUUtil         float64             `yaml:"MaximumCPUUtil" validate:"required"`
 	AcceptableTermination  int                 `yaml:"AcceptableTermination" validate:"required"`
 	RateOfCPUUtilToScaleIn float64             `yaml:"RateOfCPUUtilToScaleIn" validate:"required"`
-	DryRun                 bool                `yaml:"DryRun" validate:"required"`
+	DryRun                 bool                `yaml:"DryRun"`
 }
 
 // Validate validates config data
