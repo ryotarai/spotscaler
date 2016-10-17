@@ -51,7 +51,6 @@ ScalingPolicies:
 RedisHost: localhost:6379
 RedisKeyPrefix: spot-autoscaler-sample/
 Cooldown: 5m
-SpotRequestFulfilledIn: 5m
 InstanceTags:
   - Key: Hello
     Value: World

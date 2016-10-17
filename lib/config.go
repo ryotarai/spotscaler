@@ -21,7 +21,6 @@ type Config struct {
 	RedisHost              string              `yaml:"RedisHost" validate:"required"`
 	RedisKeyPrefix         string              `yaml:"RedisKeyPrefix"`
 	Cooldown               string              `yaml:"Cooldown" validate:"required"`
-	SpotRequestFulfilledIn string              `yaml:"SpotRequestFulfilledIn" validate:"required"`
 	HookCommands           []Command           `yaml:"HookCommands"`
 	AMICommand             Command             `yaml:"AMICommand"`
 	MinimumCapacity        float64             `yaml:"MinimumCapacity"`

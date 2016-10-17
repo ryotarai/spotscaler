@@ -181,12 +181,6 @@ func (c *EC2Client) LaunchSpotInstances(v InstanceVariety, count int64, ami stri
 		return err
 	}
 
-	d, err := time.ParseDuration(c.config.SpotRequestFulfilledIn)
-	if err != nil {
-		return err
-	}
-	fulfilledBy := time.Now().Add(d)
-
 	ids := []*string{}
 	for _, req := range resp.SpotInstanceRequests {
 		ids = append(ids, req.SpotInstanceRequestId)
@@ -199,7 +193,6 @@ func (c *EC2Client) LaunchSpotInstances(v InstanceVariety, count int64, ami stri
 
 	tags := []*ec2.Tag{
 		{Key: aws.String("RequestedBy"), Value: aws.String("spot-autoscaler")},
-		{Key: aws.String("spot-autoscaler:FulfilledBy"), Value: aws.String(fmt.Sprint(fulfilledBy.Unix()))},
 		{Key: aws.String("spot-autoscaler:Status"), Value: aws.String("pending")},
 		{Key: aws.String(fmt.Sprintf("propagate:%s", c.config.CapacityTagKey)), Value: aws.String(fmt.Sprint(capacity))},
 		{Key: aws.String("propagate:ManagedBy"), Value: aws.String("spot-autoscaler")},
