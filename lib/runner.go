@@ -88,6 +88,11 @@ func (r *Runner) Run() error {
 		return err
 	}
 
+	err = r.cancelDeadSIRs()
+	if err != nil {
+		return err
+	}
+
 	cooldownEndsAt, err := r.status.FetchCooldownEndsAt()
 	if err != nil {
 		return err
@@ -130,6 +135,22 @@ func (r *Runner) propagateSIRTagsToInstances() error {
 
 	// status:completed tag to SIR
 	err = r.ec2Client.CreateStatusTagsOfSIRs(pendingSIRs, "completed")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Runner) cancelDeadSIRs() error {
+	log.Println("[DEBUG] START: cancelDeadSIRs")
+
+	sirs, err := r.ec2Client.DescribeDeadSIRs()
+	if err != nil {
+		return err
+	}
+
+	err = r.ec2Client.CancelOpenSIRs(sirs)
 	if err != nil {
 		return err
 	}

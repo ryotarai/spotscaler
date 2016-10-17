@@ -24,6 +24,8 @@ type EC2ClientIface interface {
 	PropagateTagsFromSIRsToInstances(reqs []*ec2.SpotInstanceRequest) error
 	CreateStatusTagsOfSIRs(reqs []*ec2.SpotInstanceRequest, status string) error
 	DescribeSpotPrices(vs []InstanceVariety) (map[InstanceVariety]float64, error)
+	DescribeDeadSIRs() ([]*ec2.SpotInstanceRequest, error)
+	CancelOpenSIRs(reqs []*ec2.SpotInstanceRequest) error
 }
 
 type EC2Client struct {
@@ -374,4 +376,58 @@ func (c *EC2Client) DescribeSpotPrices(vs []InstanceVariety) (map[InstanceVariet
 	}
 
 	return res, nil
+}
+
+func (c *EC2Client) DescribeDeadSIRs() ([]*ec2.SpotInstanceRequest, error) {
+	params := &ec2.DescribeSpotInstanceRequestsInput{
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("tag:RequestedBy"),
+				Values: []*string{aws.String("spot-autoscaler")},
+			}, {
+				Name:   aws.String("state"),
+				Values: []*string{aws.String("open")},
+			},
+		},
+	}
+
+	resp, err := c.ec2.DescribeSpotInstanceRequests(params)
+	if err != nil {
+		return nil, err
+	}
+
+	deadSIRs := []*ec2.SpotInstanceRequest{}
+	for _, req := range resp.SpotInstanceRequests {
+		if time.Now().Add(-5 * time.Minute).After(*req.CreateTime) {
+			deadSIRs = append(deadSIRs, req)
+		}
+	}
+
+	return deadSIRs, nil
+}
+
+func (c *EC2Client) CancelOpenSIRs(reqs []*ec2.SpotInstanceRequest) error {
+	ids := []*string{}
+
+	for _, req := range reqs {
+		if *req.State == "open" {
+			ids = append(ids, req.SpotInstanceRequestId)
+		}
+	}
+
+	if len(ids) == 0 {
+		return nil
+	}
+
+	cancelParams := &ec2.CancelSpotInstanceRequestsInput{
+		DryRun:                 aws.Bool(c.config.DryRun),
+		SpotInstanceRequestIds: ids,
+	}
+	log.Printf("[DEBUG] CancelSpotInstanceRequests: %s", cancelParams)
+	_, err := c.ec2.CancelSpotInstanceRequests(cancelParams)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
