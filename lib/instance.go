@@ -14,9 +14,10 @@ func NewInstanceFromSDK(i *ec2.Instance) *Instance {
 
 func (i *Instance) Variety() InstanceVariety {
 	return InstanceVariety{
-		InstanceType: *i.InstanceType,
-		LaunchMethod: i.LaunchMethod(),
-		SubnetID:     *i.SubnetId,
+		InstanceType:     *i.InstanceType,
+		LaunchMethod:     i.LaunchMethod(),
+		SubnetID:         *i.SubnetId,
+		AvailabilityZone: *i.Placement.AvailabilityZone,
 	}
 }
 
