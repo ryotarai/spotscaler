@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"log"
 	"os"
+	"sort"
 	"strings"
 	"time"
 )
@@ -210,9 +211,20 @@ func (r *Runner) scale() error {
 
 	var totalDesiredCapacity float64
 	if schedule == nil {
-		keepRateOfSpot := float64(len(availableVarieties)-r.config.AcceptableTermination) / float64(len(availableVarieties))
+		spotCapacityValues := spotCapacity.Values()
+		sort.Float64s(spotCapacityValues)
+		worstTotalSpotCapacity := 0.0
+		a := len(spotCapacityValues) - r.config.AcceptableTermination
+		if a < 0 {
+			a = 0
+		}
+		for _, v := range spotCapacityValues[:a] {
+			worstTotalSpotCapacity += v
+		}
+		log.Printf("[DEBUG] in worst case, spot capacity change from %f to %f", spotCapacity.Total(), worstTotalSpotCapacity)
+
 		cpuUtilToScaleOut := r.config.MaximumCPUUtil *
-			(ondemandCapacity.Total() + spotCapacity.Total()*keepRateOfSpot) /
+			(ondemandCapacity.Total() + worstTotalSpotCapacity) /
 			(ondemandCapacity.Total() + spotCapacity.Total())
 		cpuUtilToScaleIn := cpuUtilToScaleOut * r.config.RateOfCPUUtilToScaleIn
 		log.Printf("[DEBUG] cpu util to scale out: %f, cpu util to scale in: %f", cpuUtilToScaleOut, cpuUtilToScaleIn)
@@ -236,6 +248,7 @@ func (r *Runner) scale() error {
 			return nil
 		}
 
+		keepRateOfSpot := float64(len(availableVarieties)-r.config.AcceptableTermination) / float64(len(availableVarieties))
 		scalingRate := ((((2*cpuUtil*(ondemandCapacity.Total()+spotCapacity.Total()))/(r.config.MaximumCPUUtil*(1+r.config.RateOfCPUUtilToScaleIn)) - ondemandCapacity.Total()) / keepRateOfSpot) + ondemandCapacity.Total()) / (ondemandCapacity.Total() + spotCapacity.Total())
 		scalingRate = r.correctScalingRate(scalingRate)
 		log.Printf("[INFO] scaling rate: %f", scalingRate)

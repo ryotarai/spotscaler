@@ -22,19 +22,22 @@ func configForTest() *Config {
 		},
 		InstanceVarieties: []InstanceVariety{
 			{
-				InstanceType: "c4.large",
-				SubnetID:     "subnet-abc",
-				LaunchMethod: "spot",
+				InstanceType:     "c4.large",
+				SubnetID:         "subnet-abc",
+				LaunchMethod:     "spot",
+				AvailabilityZone: "ap-northeast-1b",
 			},
 			{
-				InstanceType: "m4.large",
-				SubnetID:     "subnet-abc",
-				LaunchMethod: "spot",
+				InstanceType:     "m4.large",
+				SubnetID:         "subnet-abc",
+				LaunchMethod:     "spot",
+				AvailabilityZone: "ap-northeast-1b",
 			},
 			{
-				InstanceType: "r3.large",
-				SubnetID:     "subnet-abc",
-				LaunchMethod: "spot",
+				InstanceType:     "r3.large",
+				SubnetID:         "subnet-abc",
+				LaunchMethod:     "spot",
+				AvailabilityZone: "ap-northeast-1b",
 			},
 		},
 		BiddingPriceByType: map[string]float64{
@@ -77,6 +80,9 @@ func TestScaleOut(t *testing.T) {
 				InstanceType:          aws.String("c4.large"),
 				SubnetId:              aws.String("subnet-abc"),
 				SpotInstanceRequestId: nil, // ondemand
+				Placement: &ec2.Placement{
+					AvailabilityZone: aws.String("ap-northeast-1b"),
+				},
 			},
 		},
 		{
@@ -85,6 +91,9 @@ func TestScaleOut(t *testing.T) {
 				InstanceType:          aws.String("c4.large"),
 				SubnetId:              aws.String("subnet-abc"),
 				SpotInstanceRequestId: aws.String("sir-abc"), // spot
+				Placement: &ec2.Placement{
+					AvailabilityZone: aws.String("ap-northeast-1b"),
+				},
 			},
 		},
 	}
@@ -127,6 +136,9 @@ func TestScaleIn(t *testing.T) {
 				InstanceType:          aws.String("m4.large"),
 				SubnetId:              aws.String("subnet-abc"),
 				SpotInstanceRequestId: aws.String("sir-abc"), // spot
+				Placement: &ec2.Placement{
+					AvailabilityZone: aws.String("ap-northeast-1b"),
+				},
 				Tags: []*ec2.Tag{
 					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler")},
 				},
@@ -138,6 +150,9 @@ func TestScaleIn(t *testing.T) {
 				InstanceType:          aws.String("c4.large"),
 				SubnetId:              aws.String("subnet-abc"),
 				SpotInstanceRequestId: aws.String("sir-abc"), // spot
+				Placement: &ec2.Placement{
+					AvailabilityZone: aws.String("ap-northeast-1b"),
+				},
 				Tags: []*ec2.Tag{
 					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler")},
 				},
@@ -149,6 +164,9 @@ func TestScaleIn(t *testing.T) {
 				InstanceType:          aws.String("c4.large"),
 				SubnetId:              aws.String("subnet-abc"),
 				SpotInstanceRequestId: aws.String("sir-abc"), // spot
+				Placement: &ec2.Placement{
+					AvailabilityZone: aws.String("ap-northeast-1b"),
+				},
 				Tags: []*ec2.Tag{
 					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler")},
 				},
@@ -171,7 +189,7 @@ func TestScaleIn(t *testing.T) {
 	statusStore.On("StoreCooldownEndsAt", mock.AnythingOfType("time.Time")).Return(nil)
 
 	metricProvider := new(MockMetricProvider)
-	metricProvider.On("Values", instances).Return(Metric{10, 10, 10, 10, 15}, nil)
+	metricProvider.On("Values", instances).Return(Metric{5, 10}, nil)
 
 	r := &Runner{
 		config:         config,

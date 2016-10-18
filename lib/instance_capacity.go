@@ -16,6 +16,14 @@ func (c InstanceCapacity) Total() float64 {
 	return t
 }
 
+func (c InstanceCapacity) Values() []float64 {
+	a := []float64{}
+	for _, v := range c {
+		a = append(a, v)
+	}
+	return a
+}
+
 func SetCapacityTable(c map[string]float64) {
 	capacityTable = c
 }
