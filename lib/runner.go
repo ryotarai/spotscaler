@@ -274,6 +274,11 @@ func (r *Runner) scale() error {
 		return nil
 	}
 
+	ami, err := r.config.AMICommand.Output([]string{})
+	if err != nil {
+		return err
+	}
+
 	err = r.confirmIfNeeded("")
 	if err != nil {
 		return err
@@ -289,11 +294,6 @@ func (r *Runner) scale() error {
 	err = r.runHookCommands("scalingInstances", "Scaling instances", map[string]interface{}{
 		"change": eventDetails,
 	})
-	if err != nil {
-		return err
-	}
-
-	ami, err := r.config.AMICommand.Output([]string{})
 	if err != nil {
 		return err
 	}
