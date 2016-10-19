@@ -178,7 +178,7 @@ func (r *Runner) scale() error {
 	log.Printf("[DEBUG] spot capacity: %f", spotCapacity.Total())
 	r.storeMetricValue("lastSpotCapacity", spotCapacity.Total())
 
-	price, err := r.ec2Client.DescribeSpotPrices(r.config.InstanceVarieties)
+	price, err := r.ec2Client.DescribeSpotPrices(r.config.InstanceVarieties())
 	if err != nil {
 		return err
 	}

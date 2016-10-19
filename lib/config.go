@@ -1,7 +1,6 @@
 package autoscaler
 
 import (
-	"fmt"
 	"gopkg.in/go-playground/validator.v9"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -17,7 +16,8 @@ type Config struct {
 	LoopInterval           string              `yaml:"LoopInterval" validate:"required"`
 	InstanceCapacityByType map[string]float64  `yaml:"InstanceCapacityByType" validate:"required"`
 	BiddingPriceByType     map[string]float64  `yaml:"BiddingPriceByType" validate:"required"`
-	InstanceVarieties      []InstanceVariety   `yaml:"InstanceVarieties" validate:"required,dive"`
+	InstanceTypes          []string            `yaml:"InstanceTypes" validate:"required"`
+	Subnets                []Subnet            `yaml:"Subnets" validate:"required,dive"`
 	RedisHost              string              `yaml:"RedisHost" validate:"required"`
 	RedisKeyPrefix         string              `yaml:"RedisKeyPrefix"`
 	Cooldown               string              `yaml:"Cooldown" validate:"required"`
@@ -33,14 +33,25 @@ type Config struct {
 	DryRun                 bool                `yaml:"DryRun"`
 }
 
-// Validate validates config data
-func (c *Config) Validate() error {
-	for _, v := range c.InstanceVarieties {
-		if v.LaunchMethod != "spot" {
-			return fmt.Errorf("LaunchMethod in InstanceVarieties must be 'spot' but '%s'", v.LaunchMethod)
+func (c *Config) InstanceVarieties() []InstanceVariety {
+	vs := []InstanceVariety{}
+	for _, t := range c.InstanceTypes {
+		for _, s := range c.Subnets {
+			v := InstanceVariety{
+				LaunchMethod:     "spot",
+				SubnetID:         s.SubnetID,
+				AvailabilityZone: s.AvailabilityZone,
+				InstanceType:     t,
+			}
+			vs = append(vs, v)
 		}
 	}
 
+	return vs
+}
+
+// Validate validates config data
+func (c *Config) Validate() error {
 	validate := validator.New()
 	return validate.Struct(c)
 }
