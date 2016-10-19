@@ -27,6 +27,7 @@ type Config struct {
 	MaximumCapacity        float64             `yaml:"MaximumCapacity"`
 	MinimumScalingRate     float64             `yaml:"MinimumScalingRate"`
 	MaximumScalingRate     float64             `yaml:"MaximumScalingRate"`
+	CPUUtilCommand         Command             `yaml:"CPUUtilCommand" validate:"required"`
 	CapacityTagKey         string              `yaml:"CapacityTagKey"`
 	ConfirmBeforeAction    bool                `yaml:"ConfirmBeforeAction"`
 	Timers                 map[string]Timer    `yaml:"Timers" validate:"dive"`

@@ -12,17 +12,17 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 )
 
 type Runner struct {
-	config         *Config
-	status         StatusStoreIface
-	awsSession     *session.Session
-	ec2Client      EC2ClientIface
-	metricProvider MetricProvider
+	config     *Config
+	status     StatusStoreIface
+	awsSession *session.Session
+	ec2Client  EC2ClientIface
 }
 
 func NewRunner(config *Config) (*Runner, error) {
@@ -31,17 +31,11 @@ func NewRunner(config *Config) (*Runner, error) {
 		return nil, err
 	}
 
-	metric, err := NewMetricProvider("CloudWatchEC2", awsSess)
-	if err != nil {
-		return nil, err
-	}
-
 	runner := &Runner{
-		config:         config,
-		status:         NewStatusStore(config.RedisHost, config.RedisKeyPrefix),
-		awsSession:     awsSess,
-		ec2Client:      NewEC2Client(ec2.New(awsSess), config),
-		metricProvider: metric,
+		config:     config,
+		status:     NewStatusStore(config.RedisHost, config.RedisKeyPrefix),
+		awsSession: awsSess,
+		ec2Client:  NewEC2Client(ec2.New(awsSess), config),
 	}
 
 	return runner, nil
@@ -220,14 +214,13 @@ func (r *Runner) scale() error {
 	r.storeMetricValue("lastCPUUtilToScaleOut", cpuUtilToScaleOut)
 	r.storeMetricValue("lastCPUUtilToScaleIn", cpuUtilToScaleIn)
 
-	metric, err := r.metricProvider.Values(workingInstances)
+	cpuUtil, err := r.getCPUUtil()
 	if err != nil {
 		return err
 	}
 
-	log.Printf("[DEBUG] max of metric: %f, median of metric: %f", metric.Max(), metric.Median())
-	r.storeMetricValue("lastMaxCPUUtil", metric.Max())
-	r.storeMetricValue("lastMedianCPUUtil", metric.Median())
+	log.Printf("[DEBUG] CPU util: %f", cpuUtil)
+	r.storeMetricValue("lastCPUUtil", cpuUtil)
 
 	cooldownEndsAt, err := r.status.FetchCooldownEndsAt()
 	if err != nil {
@@ -249,9 +242,7 @@ func (r *Runner) scale() error {
 	}
 
 	var desiredCapacity InstanceCapacity
-	var scaleInOrOut string
 	if schedule == nil {
-		cpuUtil := metric.Median()
 		if cpuUtil <= cpuUtilToScaleIn {
 			log.Println("[DEBUG] scaling in")
 			scaleInOrOut = "in"
@@ -535,6 +526,19 @@ func (r *Runner) runExpiredTimers() error {
 		}
 	}
 	return nil
+}
+
+func (r *Runner) getCPUUtil() (float64, error) {
+	s, err := r.config.CPUUtilCommand.Output([]string{})
+	if err != nil {
+		return 0.0, err
+	}
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0.0, err
+	}
+
+	return f, nil
 }
 
 func (r *Runner) confirmIfNeeded(msg string) error {
