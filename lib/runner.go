@@ -239,15 +239,13 @@ func (r *Runner) scale() error {
 		r.storeMetricValue("lastMaxCPUUtil", metric.Max())
 		r.storeMetricValue("lastMedianCPUUtil", metric.Median())
 
-		var cpuUtil float64
-		if metric.Max() <= cpuUtilToScaleIn {
+		cpuUtil := metric.Median()
+		if cpuUtil <= cpuUtilToScaleIn {
 			log.Println("[DEBUG] scaling in")
 			scaleInOrOut = "in"
-			cpuUtil = metric.Max()
-		} else if cpuUtilToScaleOut <= metric.Median() {
+		} else if cpuUtilToScaleOut <= cpuUtil {
 			log.Println("[DEBUG] scaling out")
 			scaleInOrOut = "out"
-			cpuUtil = metric.Median()
 		} else {
 			log.Println("[DEBUG] skip both scaling in and scaling out")
 			return nil
