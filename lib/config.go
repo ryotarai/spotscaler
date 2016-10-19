@@ -22,7 +22,7 @@ type Config struct {
 	RedisKeyPrefix         string              `yaml:"RedisKeyPrefix"`
 	Cooldown               string              `yaml:"Cooldown" validate:"required"`
 	HookCommands           []Command           `yaml:"HookCommands"`
-	AMICommand             Command             `yaml:"AMICommand"`
+	AMICommand             Command             `yaml:"AMICommand" validate:"required"`
 	CPUUtilCommand         Command             `yaml:"CPUUtilCommand" validate:"required"`
 	CapacityTagKey         string              `yaml:"CapacityTagKey"`
 	ConfirmBeforeAction    bool                `yaml:"ConfirmBeforeAction"`

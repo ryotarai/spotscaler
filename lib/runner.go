@@ -53,7 +53,7 @@ func (r *Runner) StartLoop() error {
 		c := time.After(loopInterval)
 
 		sigchan := make(chan os.Signal, 1)
-		signal.Notify(sigchan, syscall.SIGQUIT)
+		signal.Notify(sigchan, syscall.SIGTERM)
 
 		if err != nil {
 			log.Println("[ERROR] error in loop:", err)
