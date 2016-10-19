@@ -23,10 +23,6 @@ type Config struct {
 	Cooldown               string              `yaml:"Cooldown" validate:"required"`
 	HookCommands           []Command           `yaml:"HookCommands"`
 	AMICommand             Command             `yaml:"AMICommand"`
-	MinimumCapacity        float64             `yaml:"MinimumCapacity"`
-	MaximumCapacity        float64             `yaml:"MaximumCapacity"`
-	MinimumScalingRate     float64             `yaml:"MinimumScalingRate"`
-	MaximumScalingRate     float64             `yaml:"MaximumScalingRate"`
 	CPUUtilCommand         Command             `yaml:"CPUUtilCommand" validate:"required"`
 	CapacityTagKey         string              `yaml:"CapacityTagKey"`
 	ConfirmBeforeAction    bool                `yaml:"ConfirmBeforeAction"`

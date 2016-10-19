@@ -429,30 +429,6 @@ func (r *Runner) storeMetricValue(name string, value float64) {
 	}
 }
 
-func (r *Runner) correctScalingRate(scalingRate float64) float64 {
-	if r.config.MaximumScalingRate > 0.0 && r.config.MaximumScalingRate < scalingRate {
-		log.Printf("[INFO] computed scaling rate is %f but it is over MaximumScalingRate (%f)", scalingRate, r.config.MaximumScalingRate)
-		scalingRate = r.config.MaximumScalingRate
-	} else if r.config.MinimumScalingRate > scalingRate {
-		log.Printf("[INFO] computed scaling rate is %f but it is under MinimumScalingRate (%f)", scalingRate, r.config.MinimumScalingRate)
-		scalingRate = r.config.MinimumScalingRate
-	}
-
-	return scalingRate
-}
-
-func (r *Runner) correctDesiredTotalCapacity(totalCapacity float64) float64 {
-	if r.config.MaximumCapacity > 0.0 && r.config.MaximumCapacity < totalCapacity {
-		log.Printf("[INFO] computed desired capacity is %f but it is over MaximumCapacity (%f)", totalCapacity, r.config.MaximumCapacity)
-		totalCapacity = r.config.MaximumCapacity
-	} else if r.config.MinimumCapacity > totalCapacity {
-		log.Printf("[INFO] computed desired capacity is %f but it is under MinimumCapacity (%f)", totalCapacity, r.config.MinimumCapacity)
-		totalCapacity = r.config.MinimumCapacity
-	}
-
-	return totalCapacity
-}
-
 func (r *Runner) getCurrentSchedule() (*Schedule, error) {
 	schedules, err := r.status.ListSchedules()
 	if err != nil {
