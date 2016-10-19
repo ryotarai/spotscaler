@@ -2,6 +2,7 @@ package autoscaler
 
 import (
 	"fmt"
+	"sort"
 )
 
 var capacityTable map[string]float64
@@ -22,6 +23,21 @@ func (c InstanceCapacity) Values() []float64 {
 		a = append(a, v)
 	}
 	return a
+}
+
+func (c InstanceCapacity) TotalInWorstCase(maxTerminatedVarieties int) float64 {
+	values := c.Values()
+	sort.Float64s(values)
+	total := 0.0
+	a := len(values) - maxTerminatedVarieties
+	if a < 0 {
+		a = 0
+	}
+	for _, v := range values[:a] {
+		total += v
+	}
+
+	return total
 }
 
 func SetCapacityTable(c map[string]float64) {

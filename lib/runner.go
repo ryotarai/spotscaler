@@ -198,6 +198,7 @@ func (r *Runner) scale() error {
 			log.Printf("[DEBUG] %v is not available due to price (%f USD)", v, p)
 		}
 	}
+	sort.Sort(SortInstanceVarietiesByCapacity(availableVarieties))
 	log.Printf("[DEBUG] %d spot varieties are available", len(availableVarieties))
 
 	if len(availableVarieties)-r.config.AcceptableTermination <= 0 {
@@ -209,19 +210,10 @@ func (r *Runner) scale() error {
 		return err
 	}
 
-	var totalDesiredCapacity float64
+	var desiredCapacity InstanceCapacity
 	var scaleInOrOut string
 	if schedule == nil {
-		spotCapacityValues := spotCapacity.Values()
-		sort.Float64s(spotCapacityValues)
-		worstTotalSpotCapacity := 0.0
-		a := len(spotCapacityValues) - r.config.AcceptableTermination
-		if a < 0 {
-			a = 0
-		}
-		for _, v := range spotCapacityValues[:a] {
-			worstTotalSpotCapacity += v
-		}
+		worstTotalSpotCapacity := spotCapacity.TotalInWorstCase(r.config.AcceptableTermination)
 		log.Printf("[DEBUG] in worst case, spot capacity change from %f to %f", spotCapacity.Total(), worstTotalSpotCapacity)
 
 		cpuUtilToScaleOut := r.config.MaximumCPUUtil *
@@ -251,31 +243,47 @@ func (r *Runner) scale() error {
 			return nil
 		}
 
-		keepRateOfSpot := float64(len(availableVarieties)-r.config.AcceptableTermination) / float64(len(availableVarieties))
-		scalingRate := ((((2*cpuUtil*(ondemandCapacity.Total()+spotCapacity.Total()))/(r.config.MaximumCPUUtil*(1+r.config.RateOfCPUUtilToScaleIn)) - ondemandCapacity.Total()) / keepRateOfSpot) + ondemandCapacity.Total()) / (ondemandCapacity.Total() + spotCapacity.Total())
-		scalingRate = r.correctScalingRate(scalingRate)
-		log.Printf("[INFO] scaling rate: %f", scalingRate)
-		log.Printf("[INFO] expected CPU util after scaling: %f", cpuUtil/scalingRate)
+		desiredCapacity = InstanceCapacity{}
+	L1:
+		for {
+			for _, v := range availableVarieties {
+				c, err := v.Capacity()
+				if err != nil {
+					return err
+				}
 
-		totalDesiredCapacity = (ondemandCapacity.Total() + spotCapacity.Total()) * scalingRate
-		totalDesiredCapacity = r.correctDesiredTotalCapacity(totalDesiredCapacity)
+				desiredCapacity[v] += c
+				u := cpuUtil * (ondemandCapacity.Total() + spotCapacity.Total()) / (ondemandCapacity.Total() + desiredCapacity.Total())
+				uScaleOut := r.config.MaximumCPUUtil *
+					(ondemandCapacity.Total() + desiredCapacity.TotalInWorstCase(r.config.AcceptableTermination)) /
+					(ondemandCapacity.Total() + desiredCapacity.Total())
+				r := r.config.RateOfCPUUtilToScaleIn + (1.0-r.config.RateOfCPUUtilToScaleIn)/2.0
+				if u < uScaleOut*r {
+					break L1
+				}
+			}
+		}
 	} else {
 		log.Println("[INFO] schedule found:", schedule)
-		totalDesiredCapacity = schedule.Capacity
-	}
-	log.Printf("[DEBUG] total desired capacity: %f", totalDesiredCapacity)
+		remain := schedule.Capacity
+		desiredCapacity = InstanceCapacity{}
+	L2:
+		for {
+			for _, v := range availableVarieties {
+				c, err := v.Capacity()
+				if err != nil {
+					return err
+				}
 
-	totalDesiredSpotCapacity := totalDesiredCapacity - ondemandCapacity.Total()
-	if totalDesiredSpotCapacity < 0.0 {
-		log.Printf("[DEBUG] total desired spot capacity (%f) is less than 0, fixing it to 0 forcibly", totalDesiredSpotCapacity)
-		totalDesiredSpotCapacity = 0.0
+				desiredCapacity[v] += c
+				remain -= c
+				if remain < 0.0 {
+					break L2
+				}
+			}
+		}
 	}
-	log.Printf("[DEBUG] total desired spot capacity: %f", totalDesiredSpotCapacity)
 
-	desiredCapacity := InstanceCapacity{}
-	for _, v := range availableVarieties {
-		desiredCapacity[v] = totalDesiredSpotCapacity / float64(len(availableVarieties))
-	}
 	log.Printf("[INFO] desired capacity: %v", desiredCapacity)
 
 	change := NewInstanceCapacityChange(spotCapacity, desiredCapacity)
