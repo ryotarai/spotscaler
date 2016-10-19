@@ -209,7 +209,7 @@ func (r *Runner) scale() error {
 	cpuUtilToScaleOut := r.config.MaximumCPUUtil *
 		(ondemandCapacity.Total() + worstTotalSpotCapacity) /
 		(ondemandCapacity.Total() + spotCapacity.Total())
-	cpuUtilToScaleIn := cpuUtilToScaleOut * r.config.RateOfCPUUtilToScaleIn
+	cpuUtilToScaleIn := cpuUtilToScaleOut - r.config.ScaleInThreshold
 	log.Printf("[DEBUG] cpu util to scale out: %f, cpu util to scale in: %f", cpuUtilToScaleOut, cpuUtilToScaleIn)
 	r.storeMetricValue("lastCPUUtilToScaleOut", cpuUtilToScaleOut)
 	r.storeMetricValue("lastCPUUtilToScaleIn", cpuUtilToScaleIn)
@@ -261,9 +261,8 @@ func (r *Runner) scale() error {
 			uScaleOut := r.config.MaximumCPUUtil *
 				(ondemandCapacity.Total() + desiredCapacity.TotalInWorstCase(r.config.AcceptableTermination)) /
 				(ondemandCapacity.Total() + desiredCapacity.Total())
-			r := r.config.RateOfCPUUtilToScaleIn + (1.0-r.config.RateOfCPUUtilToScaleIn)/2.0
-			log.Printf("[TRACE] u: %f, uScaleOut: %f, r: %f", u, uScaleOut, r)
-			if u < uScaleOut*r {
+			log.Printf("[TRACE] u: %f, uScaleOut: %f", u, uScaleOut)
+			if u < uScaleOut-r.config.ScaleInThreshold/2.0 {
 				break L1
 			}
 

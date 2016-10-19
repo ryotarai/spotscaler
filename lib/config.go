@@ -33,7 +33,7 @@ type Config struct {
 	Timers                 map[string]Timer    `yaml:"Timers" validate:"dive"`
 	MaximumCPUUtil         float64             `yaml:"MaximumCPUUtil" validate:"required"`
 	AcceptableTermination  int                 `yaml:"AcceptableTermination" validate:"required"`
-	RateOfCPUUtilToScaleIn float64             `yaml:"RateOfCPUUtilToScaleIn" validate:"required"`
+	ScaleInThreshold       float64             `yaml:"ScaleInThreshold" validate:"required"`
 	DryRun                 bool                `yaml:"DryRun"`
 }
 
