@@ -266,21 +266,20 @@ func (r *Runner) scale() error {
 		}
 	} else {
 		log.Println("[INFO] schedule found:", schedule)
-		remain := schedule.Capacity
 		desiredCapacity = InstanceCapacity{}
 	L2:
 		for {
 			for _, v := range availableVarieties {
+				if schedule.Capacity-ondemandCapacity.Total() <= desiredCapacity.TotalInWorstCase(r.config.AcceptableTermination) {
+					break L2
+				}
+
 				c, err := v.Capacity()
 				if err != nil {
 					return err
 				}
 
 				desiredCapacity[v] += c
-				remain -= c
-				if remain < 0.0 {
-					break L2
-				}
 			}
 		}
 	}
