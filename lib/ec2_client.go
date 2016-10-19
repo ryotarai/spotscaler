@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -216,8 +217,9 @@ func (c *EC2Client) LaunchSpotInstances(v InstanceVariety, count int64, ami stri
 			break
 		}
 		if i < retry-1 {
-			log.Printf("[INFO] CreateTags failed, will retry after 5 sec: %s", err)
-			<-time.After(time.Duration(5) * time.Second)
+			sleepSec := int(math.Pow(2, float64(i)))
+			log.Printf("[INFO] CreateTags failed, will retry after %d sec: %s", sleepSec, err)
+			<-time.After(time.Duration(sleepSec) * time.Second)
 		} else {
 			return err
 		}
