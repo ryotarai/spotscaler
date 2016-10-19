@@ -210,7 +210,7 @@ func (r *Runner) scale() error {
 	}
 
 	var totalDesiredCapacity float64
-	var scalingRate float64
+	var scaleInOrOut string
 	if schedule == nil {
 		spotCapacityValues := spotCapacity.Values()
 		sort.Float64s(spotCapacityValues)
@@ -240,9 +240,11 @@ func (r *Runner) scale() error {
 		var cpuUtil float64
 		if metric.Max() <= cpuUtilToScaleIn {
 			log.Println("[DEBUG] scaling in")
+			scaleInOrOut = "in"
 			cpuUtil = metric.Max()
 		} else if cpuUtilToScaleOut <= metric.Median() {
 			log.Println("[DEBUG] scaling out")
+			scaleInOrOut = "out"
 			cpuUtil = metric.Median()
 		} else {
 			log.Println("[DEBUG] skip both scaling in and scaling out")
@@ -250,7 +252,7 @@ func (r *Runner) scale() error {
 		}
 
 		keepRateOfSpot := float64(len(availableVarieties)-r.config.AcceptableTermination) / float64(len(availableVarieties))
-		scalingRate = ((((2*cpuUtil*(ondemandCapacity.Total()+spotCapacity.Total()))/(r.config.MaximumCPUUtil*(1+r.config.RateOfCPUUtilToScaleIn)) - ondemandCapacity.Total()) / keepRateOfSpot) + ondemandCapacity.Total()) / (ondemandCapacity.Total() + spotCapacity.Total())
+		scalingRate := ((((2*cpuUtil*(ondemandCapacity.Total()+spotCapacity.Total()))/(r.config.MaximumCPUUtil*(1+r.config.RateOfCPUUtilToScaleIn)) - ondemandCapacity.Total()) / keepRateOfSpot) + ondemandCapacity.Total()) / (ondemandCapacity.Total() + spotCapacity.Total())
 		scalingRate = r.correctScalingRate(scalingRate)
 		log.Printf("[INFO] scaling rate: %f", scalingRate)
 		log.Printf("[INFO] expected CPU util after scaling: %f", cpuUtil/scalingRate)
@@ -260,7 +262,6 @@ func (r *Runner) scale() error {
 	} else {
 		log.Println("[INFO] schedule found:", schedule)
 		totalDesiredCapacity = schedule.Capacity
-		scalingRate = 1.0
 	}
 	log.Printf("[DEBUG] total desired capacity: %f", totalDesiredCapacity)
 
@@ -284,10 +285,10 @@ func (r *Runner) scale() error {
 	}
 
 	for v, c := range changeCount {
-		if scalingRate < 1.0 && 0 < c {
+		if scaleInOrOut == "in" && 0 < c {
 			log.Printf("[DEBUG] during scaling in, launching instances is not allowed (%+v)", v)
 			delete(changeCount, v)
-		} else if 1.0 < scalingRate && c < 0 {
+		} else if scaleInOrOut == "out" && c < 0 {
 			log.Printf("[DEBUG] during scaling out, terminating instances is not allowed (%+v)", v)
 			delete(changeCount, v)
 		}
