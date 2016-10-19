@@ -258,6 +258,7 @@ func (r *Runner) scale() error {
 					(ondemandCapacity.Total() + desiredCapacity.TotalInWorstCase(r.config.AcceptableTermination)) /
 					(ondemandCapacity.Total() + desiredCapacity.Total())
 				r := r.config.RateOfCPUUtilToScaleIn + (1.0-r.config.RateOfCPUUtilToScaleIn)/2.0
+				log.Printf("[TRACE] u: %f, uScaleOut: %f, r: %f", u, uScaleOut, r)
 				if u < uScaleOut*r {
 					break L1
 				}

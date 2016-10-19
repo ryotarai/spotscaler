@@ -19,7 +19,7 @@ func StartCLI() int {
 	confirmBeforeAction := flag.Bool("confirm-before-action", false, "confirmation before important actions")
 	server := flag.String("server", "", "start API server")
 	version := flag.Bool("version", false, "show version")
-	logLevel := flag.String("log-level", "DEBUG", "log level (one of DEBUG, INFO, WARN and ERROR)")
+	logLevel := flag.String("log-level", "DEBUG", "log level (one of TRACE, DEBUG, INFO, WARN and ERROR)")
 	dryRun := flag.Bool("dry-run", false, "dry run mode")
 	flag.Parse()
 
@@ -79,7 +79,7 @@ func StartCLI() int {
 
 func SetLogLevel(level string) {
 	filter := &logutils.LevelFilter{
-		Levels:   []logutils.LogLevel{"DEBUG", "INFO", "WARN", "ERROR"},
+		Levels:   []logutils.LogLevel{"TRACE", "DEBUG", "INFO", "WARN", "ERROR"},
 		MinLevel: logutils.LogLevel(level),
 		Writer:   os.Stdout,
 	}
