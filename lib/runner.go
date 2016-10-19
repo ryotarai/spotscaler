@@ -373,7 +373,7 @@ func (r *Runner) scale() error {
 				return err
 			}
 
-			err = r.ec2Client.LaunchInstances(v, c, ami)
+			err = r.ec2Client.LaunchSpotInstances(v, c, ami)
 			if err != nil {
 				return err
 			}

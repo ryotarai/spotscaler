@@ -16,8 +16,6 @@ import (
 type EC2ClientIface interface {
 	TerminateInstancesByCount(instances Instances, v InstanceVariety, count int64) error
 	TerminateInstances(instances Instances) error
-	LaunchInstances(v InstanceVariety, c int64, ami string) error
-	LaunchOndemandInstances(v InstanceVariety, c int64, ami string) error
 	LaunchSpotInstances(v InstanceVariety, c int64, ami string) error
 	DescribeWorkingInstances() (Instances, error)
 
@@ -70,76 +68,6 @@ func (c *EC2Client) TerminateInstances(instances Instances) error {
 	log.Printf("[DEBUG] terminating: %s", params)
 
 	_, err := c.ec2.CreateTags(params)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *EC2Client) LaunchInstances(v InstanceVariety, count int64, ami string) error {
-	switch v.LaunchMethod {
-	case "ondemand":
-		return c.LaunchOndemandInstances(v, count, ami)
-	case "spot":
-		return c.LaunchSpotInstances(v, count, ami)
-	}
-	return fmt.Errorf("%s is invalid", v.LaunchMethod)
-}
-
-func (c *EC2Client) LaunchOndemandInstances(v InstanceVariety, count int64, ami string) error {
-	securityGroupIds := []*string{}
-	for _, i := range c.config.LaunchConfiguration.SecurityGroupIDs {
-		securityGroupIds = append(securityGroupIds, aws.String(i))
-	}
-
-	userData := base64.StdEncoding.EncodeToString([]byte(c.config.LaunchConfiguration.UserData))
-
-	params := &ec2.RunInstancesInput{
-		DryRun:           aws.Bool(c.config.DryRun),
-		ImageId:          aws.String(ami),
-		MaxCount:         aws.Int64(count),
-		MinCount:         aws.Int64(count),
-		InstanceType:     aws.String(v.InstanceType),
-		KeyName:          aws.String(c.config.LaunchConfiguration.KeyName),
-		SecurityGroupIds: securityGroupIds,
-		SubnetId:         aws.String(v.SubnetID),
-		UserData:         aws.String(userData),
-		IamInstanceProfile: &ec2.IamInstanceProfileSpecification{
-			Name: aws.String(c.config.LaunchConfiguration.IAMInstanceProfileName),
-		},
-		InstanceInitiatedShutdownBehavior: aws.String(c.config.LaunchConfiguration.InstanceInitiatedShutdownBehavior),
-		BlockDeviceMappings:               c.config.LaunchConfiguration.SDKBlockDeviceMappings(),
-	}
-	log.Printf("[INFO] launching ondemand instances: %s", params)
-
-	reservation, err := c.ec2.RunInstances(params)
-	if err != nil {
-		return err
-	}
-
-	instanceIDs := []*string{}
-	for _, i := range reservation.Instances {
-		instanceIDs = append(instanceIDs, i.InstanceId)
-	}
-
-	capacity, err := v.Capacity()
-	if err != nil {
-		return err
-	}
-
-	tags := []*ec2.Tag{
-		{Key: aws.String(c.config.CapacityTagKey), Value: aws.String(fmt.Sprint(capacity))},
-		{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler")},
-	}
-	tags = append(tags, c.config.InstanceTags.SDK()...)
-
-	createTagsParams := &ec2.CreateTagsInput{
-		DryRun:    aws.Bool(c.config.DryRun),
-		Resources: instanceIDs,
-		Tags:      tags,
-	}
-	_, err = c.ec2.CreateTags(createTagsParams)
 	if err != nil {
 		return err
 	}

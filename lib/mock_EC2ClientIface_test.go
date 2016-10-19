@@ -128,34 +128,6 @@ func (_m *MockEC2ClientIface) DescribeWorkingInstances() (Instances, error) {
 	return r0, r1
 }
 
-// LaunchInstances provides a mock function with given fields: v, c, ami
-func (_m *MockEC2ClientIface) LaunchInstances(v InstanceVariety, c int64, ami string) error {
-	ret := _m.Called(v, c, ami)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(InstanceVariety, int64, string) error); ok {
-		r0 = rf(v, c, ami)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// LaunchOndemandInstances provides a mock function with given fields: v, c, ami
-func (_m *MockEC2ClientIface) LaunchOndemandInstances(v InstanceVariety, c int64, ami string) error {
-	ret := _m.Called(v, c, ami)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(InstanceVariety, int64, string) error); ok {
-		r0 = rf(v, c, ami)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // LaunchSpotInstances provides a mock function with given fields: v, c, ami
 func (_m *MockEC2ClientIface) LaunchSpotInstances(v InstanceVariety, c int64, ami string) error {
 	ret := _m.Called(v, c, ami)

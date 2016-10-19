@@ -9,45 +9,38 @@ import (
 	"time"
 )
 
-func configForTest() *Config {
+func configForTest(cpuUtil string) *Config {
 	c := &Config{
 		Cooldown: "5m",
 		AMICommand: Command{
 			Command: "echo",
 			Args:    []string{"-n", "ami-abc"},
 		},
+		CPUUtilCommand: Command{
+			Command: "echo",
+			Args:    []string{"-n", cpuUtil},
+		},
 		InstanceCapacityByType: map[string]float64{
 			"c4.large": 10,
 			"m4.large": 10,
 		},
-		InstanceVarieties: []InstanceVariety{
-			{
-				InstanceType:     "c4.large",
-				SubnetID:         "subnet-abc",
-				LaunchMethod:     "spot",
-				AvailabilityZone: "ap-northeast-1b",
-			},
-			{
-				InstanceType:     "m4.large",
-				SubnetID:         "subnet-abc",
-				LaunchMethod:     "spot",
-				AvailabilityZone: "ap-northeast-1b",
-			},
-			{
-				InstanceType:     "r3.large",
-				SubnetID:         "subnet-abc",
-				LaunchMethod:     "spot",
-				AvailabilityZone: "ap-northeast-1b",
-			},
+		Subnets: []Subnet{{
+			SubnetID:         "subnet-abc",
+			AvailabilityZone: "ap-northeast-1b",
+		}},
+		InstanceTypes: []string{
+			"c4.large",
+			"m4.large",
+			"r3.large",
 		},
 		BiddingPriceByType: map[string]float64{
 			"c4.large": 0.3,
 			"m4.large": 0.3,
 			"r3.large": 0.3,
 		},
-		AcceptableTermination:  1,
-		RateOfCPUUtilToScaleIn: 0.5,
-		MaximumCPUUtil:         80,
+		AcceptableTermination: 1,
+		ScaleInThreshold:      20,
+		MaximumCPUUtil:        80,
 	}
 	SetCapacityTable(c.InstanceCapacityByType)
 	return c
@@ -72,7 +65,7 @@ func TestPropagateSIRTagsToInstances(t *testing.T) {
 }
 
 func TestScaleOut(t *testing.T) {
-	config := configForTest()
+	config := configForTest("90")
 	instances := Instances{
 		{
 			Instance: ec2.Instance{
@@ -100,27 +93,24 @@ func TestScaleOut(t *testing.T) {
 
 	ec2Client := new(MockEC2ClientIface)
 	ec2Client.On("DescribeWorkingInstances").Return(instances, nil)
-	ec2Client.On("DescribeSpotPrices", config.InstanceVarieties).Return(map[InstanceVariety]float64{
-		config.InstanceVarieties[0]: 0.1,
-		config.InstanceVarieties[1]: 0.1,
-		config.InstanceVarieties[2]: 10, // too high
+	ec2Client.On("DescribeSpotPrices", config.InstanceVarieties()).Return(map[InstanceVariety]float64{
+		config.InstanceVarieties()[0]: 0.1,
+		config.InstanceVarieties()[1]: 0.1,
+		config.InstanceVarieties()[2]: 10, // too high
 	}, nil)
-	ec2Client.On("LaunchInstances", config.InstanceVarieties[0], int64(2), "ami-abc").Return(nil)
-	ec2Client.On("LaunchInstances", config.InstanceVarieties[1], int64(3), "ami-abc").Return(nil)
+	ec2Client.On("LaunchSpotInstances", config.InstanceVarieties()[0], int64(1), "ami-abc").Return(nil)
+	ec2Client.On("LaunchSpotInstances", config.InstanceVarieties()[1], int64(2), "ami-abc").Return(nil)
 
 	statusStore := new(MockStatusStoreIface)
 	statusStore.On("ListSchedules").Return([]*Schedule{}, nil)
 	statusStore.On("FetchCooldownEndsAt").Return(time.Time{}, nil)
 	statusStore.On("StoreCooldownEndsAt", mock.AnythingOfType("time.Time")).Return(nil)
-
-	metricProvider := new(MockMetricProvider)
-	metricProvider.On("Values", instances).Return(Metric{89, 89, 90, 91, 91}, nil)
+	statusStore.On("StoreMetricValue", mock.Anything, mock.Anything).Return(nil)
 
 	r := &Runner{
-		config:         config,
-		ec2Client:      ec2Client,
-		status:         statusStore,
-		metricProvider: metricProvider,
+		config:    config,
+		ec2Client: ec2Client,
+		status:    statusStore,
 	}
 	err := r.scale()
 	assert.NoError(t, err)
@@ -128,7 +118,7 @@ func TestScaleOut(t *testing.T) {
 }
 
 func TestScaleIn(t *testing.T) {
-	config := configForTest()
+	config := configForTest("5")
 	instances := Instances{
 		{
 			Instance: ec2.Instance{
@@ -176,26 +166,23 @@ func TestScaleIn(t *testing.T) {
 
 	ec2Client := new(MockEC2ClientIface)
 	ec2Client.On("DescribeWorkingInstances").Return(instances, nil)
-	ec2Client.On("DescribeSpotPrices", config.InstanceVarieties).Return(map[InstanceVariety]float64{
-		config.InstanceVarieties[0]: 0.1,
-		config.InstanceVarieties[1]: 0.1,
-		config.InstanceVarieties[2]: 10, // too high
+	ec2Client.On("DescribeSpotPrices", config.InstanceVarieties()).Return(map[InstanceVariety]float64{
+		config.InstanceVarieties()[0]: 0.1,
+		config.InstanceVarieties()[1]: 0.1,
+		config.InstanceVarieties()[2]: 10, // too high
 	}, nil)
-	ec2Client.On("TerminateInstancesByCount", instances, config.InstanceVarieties[0], int64(1)).Return(nil)
+	ec2Client.On("TerminateInstancesByCount", instances, config.InstanceVarieties()[0], int64(1)).Return(nil)
 
 	statusStore := new(MockStatusStoreIface)
 	statusStore.On("ListSchedules").Return([]*Schedule{}, nil)
 	statusStore.On("FetchCooldownEndsAt").Return(time.Time{}, nil)
 	statusStore.On("StoreCooldownEndsAt", mock.AnythingOfType("time.Time")).Return(nil)
-
-	metricProvider := new(MockMetricProvider)
-	metricProvider.On("Values", instances).Return(Metric{5, 10}, nil)
+	statusStore.On("StoreMetricValue", mock.Anything, mock.Anything).Return(nil)
 
 	r := &Runner{
-		config:         config,
-		ec2Client:      ec2Client,
-		status:         statusStore,
-		metricProvider: metricProvider,
+		config:    config,
+		ec2Client: ec2Client,
+		status:    statusStore,
 	}
 	err := r.scale()
 	assert.NoError(t, err)
