@@ -107,16 +107,6 @@ func (r *Runner) Run() error {
 		return err
 	}
 
-	cooldownEndsAt, err := r.status.FetchCooldownEndsAt()
-	if err != nil {
-		return err
-	}
-
-	if time.Now().Before(cooldownEndsAt) {
-		log.Printf("[INFO] in cooldown (it ends at %s)", cooldownEndsAt)
-		return nil
-	}
-
 	err = r.scale()
 	if err != nil {
 		return err
@@ -218,7 +208,38 @@ func (r *Runner) scale() error {
 	r.storeMetricValue("lastAvailableVarieties", float64(len(availableVarieties)))
 	r.storeMetricValue("lastUnavailableVarieties", float64(len(price)-len(availableVarieties)))
 
-	if len(availableVarieties)-r.config.AcceptableTermination <= 0 {
+	worstTotalSpotCapacity := spotCapacity.TotalInWorstCase(r.config.AcceptableTermination)
+	log.Printf("[DEBUG] in worst case, spot capacity change from %f to %f", spotCapacity.Total(), worstTotalSpotCapacity)
+	r.storeMetricValue("lastSpotCapacityInWorstCase", worstTotalSpotCapacity)
+
+	cpuUtilToScaleOut := r.config.MaximumCPUUtil *
+		(ondemandCapacity.Total() + worstTotalSpotCapacity) /
+		(ondemandCapacity.Total() + spotCapacity.Total())
+	cpuUtilToScaleIn := cpuUtilToScaleOut * r.config.RateOfCPUUtilToScaleIn
+	log.Printf("[DEBUG] cpu util to scale out: %f, cpu util to scale in: %f", cpuUtilToScaleOut, cpuUtilToScaleIn)
+	r.storeMetricValue("lastCPUUtilToScaleOut", cpuUtilToScaleOut)
+	r.storeMetricValue("lastCPUUtilToScaleIn", cpuUtilToScaleIn)
+
+	metric, err := r.metricProvider.Values(workingInstances)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("[DEBUG] max of metric: %f, median of metric: %f", metric.Max(), metric.Median())
+	r.storeMetricValue("lastMaxCPUUtil", metric.Max())
+	r.storeMetricValue("lastMedianCPUUtil", metric.Median())
+
+	cooldownEndsAt, err := r.status.FetchCooldownEndsAt()
+	if err != nil {
+		return err
+	}
+
+	if time.Now().Before(cooldownEndsAt) {
+		log.Printf("[INFO] skip scaling in cooldown (it ends at %s)", cooldownEndsAt)
+		return nil
+	}
+
+	if len(availableVarieties)-r.config.AcceptableTermination < 1 {
 		log.Printf("[ERROR] available varieties are too few against acceptable termination (%d)", r.config.AcceptableTermination)
 	}
 
@@ -230,27 +251,6 @@ func (r *Runner) scale() error {
 	var desiredCapacity InstanceCapacity
 	var scaleInOrOut string
 	if schedule == nil {
-		worstTotalSpotCapacity := spotCapacity.TotalInWorstCase(r.config.AcceptableTermination)
-		log.Printf("[DEBUG] in worst case, spot capacity change from %f to %f", spotCapacity.Total(), worstTotalSpotCapacity)
-		r.storeMetricValue("lastSpotCapacityInWorstCase", worstTotalSpotCapacity)
-
-		cpuUtilToScaleOut := r.config.MaximumCPUUtil *
-			(ondemandCapacity.Total() + worstTotalSpotCapacity) /
-			(ondemandCapacity.Total() + spotCapacity.Total())
-		cpuUtilToScaleIn := cpuUtilToScaleOut * r.config.RateOfCPUUtilToScaleIn
-		log.Printf("[DEBUG] cpu util to scale out: %f, cpu util to scale in: %f", cpuUtilToScaleOut, cpuUtilToScaleIn)
-		r.storeMetricValue("lastCPUUtilToScaleOut", cpuUtilToScaleOut)
-		r.storeMetricValue("lastCPUUtilToScaleIn", cpuUtilToScaleIn)
-
-		metric, err := r.metricProvider.Values(workingInstances)
-		if err != nil {
-			return err
-		}
-
-		log.Printf("[DEBUG] max of metric: %f, median of metric: %f", metric.Max(), metric.Median())
-		r.storeMetricValue("lastMaxCPUUtil", metric.Max())
-		r.storeMetricValue("lastMedianCPUUtil", metric.Median())
-
 		cpuUtil := metric.Median()
 		if cpuUtil <= cpuUtilToScaleIn {
 			log.Println("[DEBUG] scaling in")
