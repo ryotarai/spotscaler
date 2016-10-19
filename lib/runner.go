@@ -10,8 +10,10 @@ import (
 	"log"
 	"math"
 	"os"
+	"os/signal"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -56,6 +58,9 @@ func (r *Runner) StartLoop() error {
 	for {
 		c := time.After(loopInterval)
 
+		sigchan := make(chan os.Signal, 1)
+		signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
+
 		if err != nil {
 			log.Println("[ERROR] error in loop:", err)
 		} else {
@@ -65,8 +70,15 @@ func (r *Runner) StartLoop() error {
 			}
 		}
 
-		log.Println("[INFO] waiting for next run")
-		<-c
+		select {
+		case <-sigchan:
+			log.Printf("[INFO] shutting down...")
+			return nil
+		default:
+			signal.Stop(sigchan)
+			log.Println("[INFO] waiting for next run")
+			<-c
+		}
 	}
 
 	return nil
