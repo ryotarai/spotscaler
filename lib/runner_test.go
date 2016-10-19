@@ -105,8 +105,8 @@ func TestScaleOut(t *testing.T) {
 		config.InstanceVarieties[1]: 0.1,
 		config.InstanceVarieties[2]: 10, // too high
 	}, nil)
-	ec2Client.On("LaunchInstances", config.InstanceVarieties[0], int64(1), "ami-abc").Return(nil)
-	ec2Client.On("LaunchInstances", config.InstanceVarieties[1], int64(2), "ami-abc").Return(nil)
+	ec2Client.On("LaunchInstances", config.InstanceVarieties[0], int64(2), "ami-abc").Return(nil)
+	ec2Client.On("LaunchInstances", config.InstanceVarieties[1], int64(3), "ami-abc").Return(nil)
 
 	statusStore := new(MockStatusStoreIface)
 	statusStore.On("ListSchedules").Return([]*Schedule{}, nil)
