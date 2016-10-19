@@ -14,16 +14,10 @@ func NewInstanceFromSDK(i *ec2.Instance) *Instance {
 
 func (i *Instance) Variety() InstanceVariety {
 	return InstanceVariety{
-		InstanceType:     *i.InstanceType,
-		LaunchMethod:     i.LaunchMethod(),
-		SubnetID:         *i.SubnetId,
-		AvailabilityZone: *i.Placement.AvailabilityZone,
+		InstanceType: *i.InstanceType,
+		Subnet: Subnet{
+			SubnetID:         *i.SubnetId,
+			AvailabilityZone: *i.Placement.AvailabilityZone,
+		},
 	}
-}
-
-func (i *Instance) LaunchMethod() string {
-	if i.SpotInstanceRequestId == nil {
-		return "ondemand"
-	}
-	return "spot"
 }

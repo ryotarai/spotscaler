@@ -97,7 +97,7 @@ func (c *EC2Client) LaunchSpotInstances(v InstanceVariety, count int64, ami stri
 			InstanceType:     aws.String(v.InstanceType),
 			KeyName:          aws.String(c.config.LaunchConfiguration.KeyName),
 			SecurityGroupIds: securityGroupIds,
-			SubnetId:         aws.String(v.SubnetID),
+			SubnetId:         aws.String(v.Subnet.SubnetID),
 			UserData:         aws.String(userData),
 			IamInstanceProfile: &ec2.IamInstanceProfileSpecification{
 				Name: aws.String(c.config.LaunchConfiguration.IAMInstanceProfileName),
@@ -262,7 +262,7 @@ func (c *EC2Client) DescribeSpotPrices(vs []InstanceVariety) (map[InstanceVariet
 
 	varietiesByAZ := map[string][]InstanceVariety{}
 	for _, v := range vs {
-		varietiesByAZ[v.AvailabilityZone] = append(varietiesByAZ[v.AvailabilityZone], v)
+		varietiesByAZ[v.Subnet.AvailabilityZone] = append(varietiesByAZ[v.Subnet.AvailabilityZone], v)
 	}
 
 	for az, vs := range varietiesByAZ {
@@ -291,7 +291,7 @@ func (c *EC2Client) DescribeSpotPrices(vs []InstanceVariety) (map[InstanceVariet
 				latestTimestamp := time.Time{}
 				latestPrice := 0.0
 				for _, p := range page.SpotPriceHistory {
-					if latestTimestamp.Before(*p.Timestamp) && *p.InstanceType == v.InstanceType && *p.AvailabilityZone == v.AvailabilityZone {
+					if latestTimestamp.Before(*p.Timestamp) && *p.InstanceType == v.InstanceType && *p.AvailabilityZone == v.Subnet.AvailabilityZone {
 						latestTimestamp = *p.Timestamp
 						f, err := strconv.ParseFloat(*p.SpotPrice, 64)
 						if err != nil {

@@ -1,10 +1,8 @@
 package autoscaler
 
 type InstanceVariety struct {
-	InstanceType     string `yaml:"InstanceType" validate:"required"`
-	LaunchMethod     string `yaml:"LaunchMethod" validate:"required"`
-	SubnetID         string `yaml:"SubnetID" validate:"required"`
-	AvailabilityZone string `yaml:"AvailabilityZone" validate:"required"`
+	InstanceType string
+	Subnet       Subnet
 }
 
 func (v InstanceVariety) Capacity() (float64, error) {

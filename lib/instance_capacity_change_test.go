@@ -13,13 +13,17 @@ func TestCount(t *testing.T) {
 
 	v1 := InstanceVariety{
 		InstanceType: "t1",
-		SubnetID:     "subnet-abc",
-		LaunchMethod: "spot",
+		Subnet: Subnet{
+			SubnetID:         "subnet-abc",
+			AvailabilityZone: "ap-northeast-1a",
+		},
 	}
 	v2 := InstanceVariety{
 		InstanceType: "t2",
-		SubnetID:     "subnet-abc",
-		LaunchMethod: "spot",
+		Subnet: Subnet{
+			SubnetID:         "subnet-abc",
+			AvailabilityZone: "ap-northeast-1a",
+		},
 	}
 
 	from := InstanceCapacity{

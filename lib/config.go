@@ -38,10 +38,8 @@ func (c *Config) InstanceVarieties() []InstanceVariety {
 	for _, t := range c.InstanceTypes {
 		for _, s := range c.Subnets {
 			v := InstanceVariety{
-				LaunchMethod:     "spot",
-				SubnetID:         s.SubnetID,
-				AvailabilityZone: s.AvailabilityZone,
-				InstanceType:     t,
+				Subnet:       s,
+				InstanceType: t,
 			}
 			vs = append(vs, v)
 		}
