@@ -2,6 +2,7 @@ package autoscaler
 
 import (
 	"github.com/gin-gonic/gin"
+	"log"
 )
 
 type APIServer struct {
@@ -16,14 +17,28 @@ func NewAPIServer(status *StatusStore) *APIServer {
 
 func (s *APIServer) Run(addr string) {
 	r := gin.Default()
+	r.GET("/status", s.getStatusHandler)
 	r.GET("/schedules", s.getSchedulesHandler)
 	r.POST("/schedules", s.postSchedulesHandler)
 	r.DELETE("/schedules", s.deleteSchedulesHandler)
 	r.Run(addr)
 }
 
+func (s *APIServer) getStatusHandler(c *gin.Context) {
+	metric, err := s.status.GetMetric()
+	if err != nil {
+		log.Printf("[ERROR] %v", err)
+	}
+
+	c.JSON(200, metric)
+}
+
 func (s *APIServer) getSchedulesHandler(c *gin.Context) {
-	schedules, _ := s.status.ListSchedules()
+	schedules, err := s.status.ListSchedules()
+	if err != nil {
+		log.Printf("[ERROR] %v", err)
+	}
+
 	c.JSON(200, schedules)
 }
 

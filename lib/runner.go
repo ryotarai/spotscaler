@@ -173,12 +173,14 @@ func (r *Runner) scale() error {
 		return err
 	}
 	log.Printf("[DEBUG] ondemand capacity: %f", ondemandCapacity.Total())
+	r.storeMetricValue("lastOndemandCapacity", ondemandCapacity.Total())
 
 	spotCapacity, err := workingInstances.Spot().Capacity()
 	if err != nil {
 		return err
 	}
 	log.Printf("[DEBUG] spot capacity: %f", spotCapacity.Total())
+	r.storeMetricValue("lastSpotCapacity", spotCapacity.Total())
 
 	price, err := r.ec2Client.DescribeSpotPrices(r.config.InstanceVarieties)
 	if err != nil {
@@ -201,6 +203,8 @@ func (r *Runner) scale() error {
 	}
 	sort.Sort(sort.Reverse(SortInstanceVarietiesByCapacity(availableVarieties)))
 	log.Printf("[DEBUG] %d spot varieties are available", len(availableVarieties))
+	r.storeMetricValue("lastAvailableVarieties", float64(len(availableVarieties)))
+	r.storeMetricValue("lastUnavailableVarieties", float64(len(price)-len(availableVarieties)))
 
 	if len(availableVarieties)-r.config.AcceptableTermination <= 0 {
 		log.Printf("[ERROR] available varieties are too few against acceptable termination (%d)", r.config.AcceptableTermination)
@@ -216,12 +220,15 @@ func (r *Runner) scale() error {
 	if schedule == nil {
 		worstTotalSpotCapacity := spotCapacity.TotalInWorstCase(r.config.AcceptableTermination)
 		log.Printf("[DEBUG] in worst case, spot capacity change from %f to %f", spotCapacity.Total(), worstTotalSpotCapacity)
+		r.storeMetricValue("lastSpotCapacityInWorstCase", worstTotalSpotCapacity)
 
 		cpuUtilToScaleOut := r.config.MaximumCPUUtil *
 			(ondemandCapacity.Total() + worstTotalSpotCapacity) /
 			(ondemandCapacity.Total() + spotCapacity.Total())
 		cpuUtilToScaleIn := cpuUtilToScaleOut * r.config.RateOfCPUUtilToScaleIn
 		log.Printf("[DEBUG] cpu util to scale out: %f, cpu util to scale in: %f", cpuUtilToScaleOut, cpuUtilToScaleIn)
+		r.storeMetricValue("lastCPUUtilToScaleOut", cpuUtilToScaleOut)
+		r.storeMetricValue("lastCPUUtilToScaleIn", cpuUtilToScaleIn)
 
 		metric, err := r.metricProvider.Values(workingInstances)
 		if err != nil {
@@ -229,6 +236,8 @@ func (r *Runner) scale() error {
 		}
 
 		log.Printf("[DEBUG] max of metric: %f, median of metric: %f", metric.Max(), metric.Median())
+		r.storeMetricValue("lastMaxCPUUtil", metric.Max())
+		r.storeMetricValue("lastMedianCPUUtil", metric.Median())
 
 		var cpuUtil float64
 		if metric.Max() <= cpuUtilToScaleIn {
@@ -411,6 +420,13 @@ func (r *Runner) takeCooldown() error {
 	}
 
 	return nil
+}
+
+func (r *Runner) storeMetricValue(name string, value float64) {
+	err := r.status.StoreMetricValue(name, value)
+	if err != nil {
+		log.Printf("[WARN] Storing metric value failed: %v", err)
+	}
 }
 
 func (r *Runner) correctScalingRate(scalingRate float64) float64 {

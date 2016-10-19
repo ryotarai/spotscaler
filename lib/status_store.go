@@ -17,6 +17,8 @@ type StatusStoreIface interface {
 	UpdateTimer(key string, t time.Time) error
 	DeleteTimer(key string) error
 	GetExpiredTimers() ([]string, error)
+	StoreMetricValue(name string, value float64) error
+	GetMetric() (map[string]float64, error)
 }
 
 // StatusStore stores status data in Redis
@@ -147,4 +149,30 @@ func (s *StatusStore) GetExpiredTimers() ([]string, error) {
 	}
 
 	return keys, nil
+}
+
+func (s *StatusStore) StoreMetricValue(name string, value float64) error {
+	strV := fmt.Sprintf("%f", value)
+	_, err := s.redisClient.HSet(s.key("metric"), name, strV).Result()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *StatusStore) GetMetric() (map[string]float64, error) {
+	strM, err := s.redisClient.HGetAll(s.key("metric")).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	floatM := map[string]float64{}
+	for k, v := range strM {
+		floatM[k], err = strconv.ParseFloat(v, 64)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return floatM, nil
 }

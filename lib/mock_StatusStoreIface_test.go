@@ -80,6 +80,29 @@ func (_m *MockStatusStoreIface) GetExpiredTimers() ([]string, error) {
 	return r0, r1
 }
 
+// GetMetric provides a mock function with given fields:
+func (_m *MockStatusStoreIface) GetMetric() (map[string]float64, error) {
+	ret := _m.Called()
+
+	var r0 map[string]float64
+	if rf, ok := ret.Get(0).(func() map[string]float64); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]float64)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListSchedules provides a mock function with given fields:
 func (_m *MockStatusStoreIface) ListSchedules() ([]*Schedule, error) {
 	ret := _m.Called()
@@ -124,6 +147,20 @@ func (_m *MockStatusStoreIface) StoreCooldownEndsAt(t time.Time) error {
 	var r0 error
 	if rf, ok := ret.Get(0).(func(time.Time) error); ok {
 		r0 = rf(t)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// StoreMetricValue provides a mock function with given fields: name, value
+func (_m *MockStatusStoreIface) StoreMetricValue(name string, value float64) error {
+	ret := _m.Called(name, value)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, float64) error); ok {
+		r0 = rf(name, value)
 	} else {
 		r0 = ret.Error(0)
 	}
