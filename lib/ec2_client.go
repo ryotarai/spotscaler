@@ -347,32 +347,49 @@ func (c *EC2Client) DescribeSpotPrices(vs []InstanceVariety) (map[InstanceVariet
 			ProductDescriptions: []*string{aws.String("Linux/UNIX (Amazon VPC)")}, // TODO: make configurable
 		}
 
-		output, err := c.ec2.DescribeSpotPriceHistory(input)
-		if err != nil {
-			return nil, err
-		}
+		found := map[InstanceVariety]bool{}
+		var errInside error
+		pageIndex := 1
+		err := c.ec2.DescribeSpotPriceHistoryPages(input, func(page *ec2.DescribeSpotPriceHistoryOutput, lastPage bool) bool {
+			log.Printf("[TRACE] DescribeSpotPriceHistory page %i", pageIndex)
+			for _, v := range vs {
+				if f := found[v]; f {
+					// already found
+					continue
+				}
 
-		for _, v := range vs {
-			latestTimestamp := time.Time{}
-			latestPrice := 0.0
-			for _, p := range output.SpotPriceHistory {
-				if latestTimestamp.Before(*p.Timestamp) && *p.InstanceType == v.InstanceType && *p.AvailabilityZone == v.AvailabilityZone {
-					latestTimestamp = *p.Timestamp
-					f, err := strconv.ParseFloat(*p.SpotPrice, 64)
-					if err != nil {
-						return nil, err
+				latestTimestamp := time.Time{}
+				latestPrice := 0.0
+				for _, p := range page.SpotPriceHistory {
+					if latestTimestamp.Before(*p.Timestamp) && *p.InstanceType == v.InstanceType && *p.AvailabilityZone == v.AvailabilityZone {
+						latestTimestamp = *p.Timestamp
+						f, err := strconv.ParseFloat(*p.SpotPrice, 64)
+						if err != nil {
+							errInside = err
+							return false
+						}
+
+						latestPrice = f
 					}
+				}
 
-					latestPrice = f
+				if latestPrice != 0.0 {
+					// found
+					res[v] = latestPrice
+					found[v] = true
 				}
 			}
 
-			if latestPrice == 0.0 {
-				log.Printf("[WARN] Spot price of %v is not found", v)
-				continue
-			}
+			pageIndex++
+			return len(found) < len(vs)
+		})
 
-			res[v] = latestPrice
+		if errInside != nil {
+			return nil, errInside
+		}
+
+		if err != nil {
+			return nil, err
 		}
 	}
 
