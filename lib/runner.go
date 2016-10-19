@@ -247,12 +247,6 @@ func (r *Runner) scale() error {
 	L1:
 		for {
 			for _, v := range availableVarieties {
-				c, err := v.Capacity()
-				if err != nil {
-					return err
-				}
-
-				desiredCapacity[v] += c
 				u := cpuUtil * (ondemandCapacity.Total() + spotCapacity.Total()) / (ondemandCapacity.Total() + desiredCapacity.Total())
 				uScaleOut := r.config.MaximumCPUUtil *
 					(ondemandCapacity.Total() + desiredCapacity.TotalInWorstCase(r.config.AcceptableTermination)) /
@@ -262,6 +256,12 @@ func (r *Runner) scale() error {
 				if u < uScaleOut*r {
 					break L1
 				}
+
+				c, err := v.Capacity()
+				if err != nil {
+					return err
+				}
+				desiredCapacity[v] += c
 			}
 		}
 	} else {
