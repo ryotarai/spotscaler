@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"log"
+	"math"
 	"os"
 	"sort"
 	"strings"
@@ -198,7 +199,7 @@ func (r *Runner) scale() error {
 			log.Printf("[DEBUG] %v is not available due to price (%f USD)", v, p)
 		}
 	}
-	sort.Sort(SortInstanceVarietiesByCapacity(availableVarieties))
+	sort.Sort(sort.Reverse(SortInstanceVarietiesByCapacity(availableVarieties)))
 	log.Printf("[DEBUG] %d spot varieties are available", len(availableVarieties))
 
 	if len(availableVarieties)-r.config.AcceptableTermination <= 0 {
@@ -246,41 +247,65 @@ func (r *Runner) scale() error {
 		desiredCapacity = InstanceCapacity{}
 	L1:
 		for {
-			for _, v := range availableVarieties {
-				u := cpuUtil * (ondemandCapacity.Total() + spotCapacity.Total()) / (ondemandCapacity.Total() + desiredCapacity.Total())
-				uScaleOut := r.config.MaximumCPUUtil *
-					(ondemandCapacity.Total() + desiredCapacity.TotalInWorstCase(r.config.AcceptableTermination)) /
-					(ondemandCapacity.Total() + desiredCapacity.Total())
-				r := r.config.RateOfCPUUtilToScaleIn + (1.0-r.config.RateOfCPUUtilToScaleIn)/2.0
-				log.Printf("[TRACE] u: %f, uScaleOut: %f, r: %f, v: %v", u, uScaleOut, r, v)
-				if u < uScaleOut*r {
-					break L1
-				}
-
-				c, err := v.Capacity()
-				if err != nil {
-					return err
-				}
-				desiredCapacity[v] += c
+			u := cpuUtil * (ondemandCapacity.Total() + spotCapacity.Total()) / (ondemandCapacity.Total() + desiredCapacity.Total())
+			uScaleOut := r.config.MaximumCPUUtil *
+				(ondemandCapacity.Total() + desiredCapacity.TotalInWorstCase(r.config.AcceptableTermination)) /
+				(ondemandCapacity.Total() + desiredCapacity.Total())
+			r := r.config.RateOfCPUUtilToScaleIn + (1.0-r.config.RateOfCPUUtilToScaleIn)/2.0
+			log.Printf("[TRACE] u: %f, uScaleOut: %f, r: %f", u, uScaleOut, r)
+			if u < uScaleOut*r {
+				break L1
 			}
+
+			var leastVariety InstanceVariety
+			leastCapacity := math.Inf(1)
+			// availableVarieties is sorted by capacity in desc order
+			for _, v := range availableVarieties {
+				if desiredCapacity[v] < leastCapacity {
+					leastCapacity = desiredCapacity[v]
+					leastVariety = v
+				}
+			}
+			if math.IsInf(leastCapacity, 1) {
+				return fmt.Errorf("cannot determine instance variety")
+			}
+
+			log.Printf("[TRACE] adding %v", leastVariety)
+			c, err := leastVariety.Capacity()
+			if err != nil {
+				return err
+			}
+			desiredCapacity[leastVariety] += c
 		}
 	} else {
 		log.Println("[INFO] schedule found:", schedule)
 		desiredCapacity = InstanceCapacity{}
 	L2:
 		for {
-			for _, v := range availableVarieties {
-				if schedule.Capacity-ondemandCapacity.Total() <= desiredCapacity.TotalInWorstCase(r.config.AcceptableTermination) {
-					break L2
-				}
-
-				c, err := v.Capacity()
-				if err != nil {
-					return err
-				}
-
-				desiredCapacity[v] += c
+			if schedule.Capacity-ondemandCapacity.Total() <= desiredCapacity.TotalInWorstCase(r.config.AcceptableTermination) {
+				break L2
 			}
+
+			var leastVariety InstanceVariety
+			leastCapacity := math.Inf(1)
+			// availableVarieties is sorted by capacity in desc order
+			for _, v := range availableVarieties {
+				if desiredCapacity[v] < leastCapacity {
+					leastCapacity = desiredCapacity[v]
+					leastVariety = v
+				}
+			}
+			if math.IsInf(leastCapacity, 1) {
+				return fmt.Errorf("cannot determine instance variety")
+			}
+
+			log.Printf("[TRACE] adding %v", leastVariety)
+			c, err := leastVariety.Capacity()
+			if err != nil {
+				return err
+			}
+
+			desiredCapacity[leastVariety] += c
 		}
 	}
 
