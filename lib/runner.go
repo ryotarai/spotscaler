@@ -245,10 +245,8 @@ func (r *Runner) scale() error {
 	if schedule == nil {
 		if cpuUtil <= cpuUtilToScaleIn {
 			log.Println("[DEBUG] scaling in")
-			scaleInOrOut = "in"
 		} else if cpuUtilToScaleOut <= cpuUtil {
 			log.Println("[DEBUG] scaling out")
-			scaleInOrOut = "out"
 		} else {
 			log.Println("[DEBUG] skip both scaling in and scaling out")
 			return nil
@@ -324,16 +322,6 @@ func (r *Runner) scale() error {
 	changeCount, err := change.Count()
 	if err != nil {
 		return err
-	}
-
-	for v, c := range changeCount {
-		if scaleInOrOut == "in" && 0 < c {
-			log.Printf("[DEBUG] during scaling in, launching instances is not allowed (%+v)", v)
-			delete(changeCount, v)
-		} else if scaleInOrOut == "out" && c < 0 {
-			log.Printf("[DEBUG] during scaling out, terminating instances is not allowed (%+v)", v)
-			delete(changeCount, v)
-		}
 	}
 
 	log.Printf("[INFO] change count: %v", changeCount)
