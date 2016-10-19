@@ -351,7 +351,7 @@ func (c *EC2Client) DescribeSpotPrices(vs []InstanceVariety) (map[InstanceVariet
 		var errInside error
 		pageIndex := 1
 		err := c.ec2.DescribeSpotPriceHistoryPages(input, func(page *ec2.DescribeSpotPriceHistoryOutput, lastPage bool) bool {
-			log.Printf("[TRACE] DescribeSpotPriceHistory page %i", pageIndex)
+			log.Printf("[TRACE] DescribeSpotPriceHistory page %d", pageIndex)
 			for _, v := range vs {
 				if f := found[v]; f {
 					// already found
