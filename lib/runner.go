@@ -293,6 +293,13 @@ func (r *Runner) scale() error {
 		return err
 	}
 
+	for v, i := range changeCount {
+		if schedule != nil && i < 0 {
+			log.Printf("[WARN] with scheduled capacity, terminating an instance is not allowed: %v * %d", v, i)
+			changeCount[v] = 0
+		}
+	}
+
 	log.Printf("[INFO] change count: %v", changeCount)
 
 	if len(changeCount) == 0 {
