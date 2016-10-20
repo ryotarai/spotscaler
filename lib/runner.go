@@ -325,7 +325,7 @@ func (r *Runner) scale() error {
 		})
 	}
 	err = r.runHookCommands("scalingInstances", "Scaling instances", map[string]interface{}{
-		"change": eventDetails,
+		"Changes": eventDetails,
 	})
 	if err != nil {
 		return err
