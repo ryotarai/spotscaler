@@ -37,7 +37,7 @@ func (c InstanceCapacity) Varieties() []InstanceVariety {
 
 func (c InstanceCapacity) Increment() (InstanceCapacity, error) {
 	varieties := c.Varieties()
-	sort.Sort(sort.Reverse(SortInstanceVarietiesByCapacity(varieties)))
+	sort.Sort(SortInstanceVarietiesByCapacity(varieties))
 
 	var leastVariety InstanceVariety
 	leastCapacity := math.Inf(1)
