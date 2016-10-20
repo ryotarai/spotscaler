@@ -2,6 +2,8 @@ package autoscaler
 
 import (
 	"fmt"
+	"log"
+	"math"
 	"sort"
 )
 
@@ -23,6 +25,37 @@ func (c InstanceCapacity) Values() []float64 {
 		a = append(a, v)
 	}
 	return a
+}
+
+func (c InstanceCapacity) Varieties() []InstanceVariety {
+	vs := []InstanceVariety{}
+	for v, _ := range c {
+		vs = append(vs, v)
+	}
+	return vs
+}
+
+func (c InstanceCapacity) Increment() (InstanceCapacity, error) {
+	varieties := c.Varieties()
+	sort.Sort(sort.Reverse(SortInstanceVarietiesByCapacity(varieties)))
+
+	var leastVariety InstanceVariety
+	leastCapacity := math.Inf(1)
+	for _, v := range varieties {
+		if c[v] < leastCapacity {
+			leastCapacity = c[v]
+			leastVariety = v
+		}
+	}
+
+	log.Printf("[TRACE] InstanceCapacity.Increment: adding %v", leastVariety)
+	cap, err := leastVariety.Capacity()
+	if err != nil {
+		return nil, err
+	}
+	c[leastVariety] += cap
+
+	return c, nil
 }
 
 func (c InstanceCapacity) TotalInWorstCase(maxTerminatedVarieties int) float64 {

@@ -8,10 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"log"
-	"math"
 	"os"
 	"os/signal"
-	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -197,7 +195,6 @@ func (r *Runner) scale() error {
 			log.Printf("[DEBUG] %v is not available due to price (%f USD)", v, p)
 		}
 	}
-	sort.Sort(sort.Reverse(SortInstanceVarietiesByCapacity(availableVarieties)))
 	log.Printf("[DEBUG] %d spot varieties are available", len(availableVarieties))
 	r.storeMetricValue("lastAvailableVarieties", float64(len(availableVarieties)))
 	r.storeMetricValue("lastUnavailableVarieties", float64(len(price)-len(availableVarieties)))
@@ -253,6 +250,9 @@ func (r *Runner) scale() error {
 		}
 
 		desiredCapacity = InstanceCapacity{}
+		for _, v := range availableVarieties {
+			desiredCapacity[v] = 0.0
+		}
 	L1:
 		for {
 			u := cpuUtil * (ondemandCapacity.Total() + spotCapacity.Total()) / (ondemandCapacity.Total() + desiredCapacity.Total())
@@ -264,25 +264,10 @@ func (r *Runner) scale() error {
 				break L1
 			}
 
-			var leastVariety InstanceVariety
-			leastCapacity := math.Inf(1)
-			// availableVarieties is sorted by capacity in desc order
-			for _, v := range availableVarieties {
-				if desiredCapacity[v] < leastCapacity {
-					leastCapacity = desiredCapacity[v]
-					leastVariety = v
-				}
-			}
-			if math.IsInf(leastCapacity, 1) {
-				return fmt.Errorf("cannot determine instance variety")
-			}
-
-			log.Printf("[TRACE] adding %v", leastVariety)
-			c, err := leastVariety.Capacity()
+			desiredCapacity, err = desiredCapacity.Increment()
 			if err != nil {
 				return err
 			}
-			desiredCapacity[leastVariety] += c
 		}
 	} else {
 		log.Println("[INFO] schedule found:", schedule)
@@ -293,26 +278,10 @@ func (r *Runner) scale() error {
 				break L2
 			}
 
-			var leastVariety InstanceVariety
-			leastCapacity := math.Inf(1)
-			// availableVarieties is sorted by capacity in desc order
-			for _, v := range availableVarieties {
-				if desiredCapacity[v] < leastCapacity {
-					leastCapacity = desiredCapacity[v]
-					leastVariety = v
-				}
-			}
-			if math.IsInf(leastCapacity, 1) {
-				return fmt.Errorf("cannot determine instance variety")
-			}
-
-			log.Printf("[TRACE] adding %v", leastVariety)
-			c, err := leastVariety.Capacity()
+			desiredCapacity, err = desiredCapacity.Increment()
 			if err != nil {
 				return err
 			}
-
-			desiredCapacity[leastVariety] += c
 		}
 	}
 
@@ -344,8 +313,8 @@ func (r *Runner) scale() error {
 	eventDetails := []map[string]interface{}{}
 	for v, c := range changeCount {
 		eventDetails = append(eventDetails, map[string]interface{}{
-			"count":   c,
-			"variety": v,
+			"Count":   c,
+			"Variety": v,
 		})
 	}
 	err = r.runHookCommands("scalingInstances", "Scaling instances", map[string]interface{}{
