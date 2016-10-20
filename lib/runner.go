@@ -255,6 +255,11 @@ func (r *Runner) scale() error {
 		}
 	L1:
 		for {
+			if r.config.MaximumCapacity > 0 && ondemandCapacity.Total()+desiredCapacity.Total() > r.config.MaximumCapacity {
+				log.Printf("[WARN] over maximum capacity")
+				break L1
+			}
+
 			u := cpuUtil * (ondemandCapacity.Total() + spotCapacity.Total()) / (ondemandCapacity.Total() + desiredCapacity.Total())
 			uScaleOut := r.config.MaximumCPUUtil *
 				(ondemandCapacity.Total() + desiredCapacity.TotalInWorstCase(r.config.AcceptableTermination)) /
