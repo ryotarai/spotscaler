@@ -1,5 +1,5 @@
 package autoscaler
 
-const Version string = "0.2.0.pre1"
+const Version string = "0.2.0.pre2"
 
 var GitCommit string
