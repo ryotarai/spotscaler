@@ -17,7 +17,7 @@ type StatusStoreIface interface {
 	UpdateTimer(key string, t time.Time) error
 	DeleteTimer(key string) error
 	GetExpiredTimers() ([]string, error)
-	StoreMetricValue(name string, value float64) error
+	StoreMetric(values map[string]float64) error
 	GetMetric() (map[string]float64, error)
 }
 
@@ -151,9 +151,13 @@ func (s *StatusStore) GetExpiredTimers() ([]string, error) {
 	return keys, nil
 }
 
-func (s *StatusStore) StoreMetricValue(name string, value float64) error {
-	strV := fmt.Sprintf("%f", value)
-	_, err := s.redisClient.HSet(s.key("metric"), name, strV).Result()
+func (s *StatusStore) StoreMetric(values map[string]float64) error {
+	svalues := map[string]string{}
+	for k, v := range values {
+		svalues[k] = fmt.Sprintf("%f", v)
+	}
+
+	_, err := s.redisClient.HMSet(s.key("metric"), svalues).Result()
 	if err != nil {
 		return err
 	}

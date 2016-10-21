@@ -167,14 +167,12 @@ func (r *Runner) scale() error {
 		return err
 	}
 	log.Printf("[DEBUG] ondemand capacity: %f", ondemandCapacity.Total())
-	r.storeMetricValue("lastOndemandCapacity", ondemandCapacity.Total())
 
 	spotCapacity, err := workingInstances.Spot().Capacity()
 	if err != nil {
 		return err
 	}
 	log.Printf("[DEBUG] spot capacity: %f", spotCapacity.Total())
-	r.storeMetricValue("lastSpotCapacity", spotCapacity.Total())
 
 	price, err := r.ec2Client.DescribeSpotPrices(r.config.InstanceVarieties())
 	if err != nil {
@@ -196,20 +194,15 @@ func (r *Runner) scale() error {
 		}
 	}
 	log.Printf("[DEBUG] %d spot varieties are available", len(availableVarieties))
-	r.storeMetricValue("lastAvailableVarieties", float64(len(availableVarieties)))
-	r.storeMetricValue("lastUnavailableVarieties", float64(len(price)-len(availableVarieties)))
 
 	worstTotalSpotCapacity := spotCapacity.TotalInWorstCase(r.config.AcceptableTermination)
 	log.Printf("[DEBUG] in worst case, spot capacity change from %f to %f", spotCapacity.Total(), worstTotalSpotCapacity)
-	r.storeMetricValue("lastSpotCapacityInWorstCase", worstTotalSpotCapacity)
 
 	cpuUtilToScaleOut := r.config.MaximumCPUUtil *
 		(ondemandCapacity.Total() + worstTotalSpotCapacity) /
 		(ondemandCapacity.Total() + spotCapacity.Total())
 	cpuUtilToScaleIn := cpuUtilToScaleOut - r.config.ScaleInThreshold
 	log.Printf("[DEBUG] cpu util to scale out: %f, cpu util to scale in: %f", cpuUtilToScaleOut, cpuUtilToScaleIn)
-	r.storeMetricValue("lastCPUUtilToScaleOut", cpuUtilToScaleOut)
-	r.storeMetricValue("lastCPUUtilToScaleIn", cpuUtilToScaleIn)
 
 	cpuUtil, err := r.getCPUUtil()
 	if err != nil {
@@ -217,7 +210,20 @@ func (r *Runner) scale() error {
 	}
 
 	log.Printf("[DEBUG] CPU util: %f", cpuUtil)
-	r.storeMetricValue("lastCPUUtil", cpuUtil)
+
+	err = r.status.StoreMetric(map[string]float64{
+		"lastOndemandCapacity":        ondemandCapacity.Total(),
+		"lastSpotCapacity":            spotCapacity.Total(),
+		"lastAvailableVarieties":      float64(len(availableVarieties)),
+		"lastUnavailableVarieties":    float64(len(price) - len(availableVarieties)),
+		"lastSpotCapacityInWorstCase": worstTotalSpotCapacity,
+		"lastCPUUtilToScaleOut":       cpuUtilToScaleOut,
+		"lastCPUUtilToScaleIn":        cpuUtilToScaleIn,
+		"lastCPUUtil":                 cpuUtil,
+	})
+	if err != nil {
+		log.Printf("[WARN] storing metric failed")
+	}
 
 	cooldownEndsAt, err := r.status.FetchCooldownEndsAt()
 	if err != nil {
@@ -365,13 +371,6 @@ func (r *Runner) takeCooldown() error {
 	}
 
 	return nil
-}
-
-func (r *Runner) storeMetricValue(name string, value float64) {
-	err := r.status.StoreMetricValue(name, value)
-	if err != nil {
-		log.Printf("[WARN] Storing metric value failed: %v", err)
-	}
 }
 
 func (r *Runner) getCurrentSchedule() (*Schedule, error) {

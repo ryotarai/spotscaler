@@ -154,13 +154,13 @@ func (_m *MockStatusStoreIface) StoreCooldownEndsAt(t time.Time) error {
 	return r0
 }
 
-// StoreMetricValue provides a mock function with given fields: name, value
-func (_m *MockStatusStoreIface) StoreMetricValue(name string, value float64) error {
-	ret := _m.Called(name, value)
+// StoreMetric provides a mock function with given fields: values
+func (_m *MockStatusStoreIface) StoreMetric(values map[string]float64) error {
+	ret := _m.Called(values)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, float64) error); ok {
-		r0 = rf(name, value)
+	if rf, ok := ret.Get(0).(func(map[string]float64) error); ok {
+		r0 = rf(values)
 	} else {
 		r0 = ret.Error(0)
 	}

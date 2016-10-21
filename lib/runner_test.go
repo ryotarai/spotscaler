@@ -107,7 +107,7 @@ func TestScaleOut(t *testing.T) {
 	statusStore.On("ListSchedules").Return([]*Schedule{}, nil)
 	statusStore.On("FetchCooldownEndsAt").Return(time.Time{}, nil)
 	statusStore.On("StoreCooldownEndsAt", mock.AnythingOfType("time.Time")).Return(nil)
-	statusStore.On("StoreMetricValue", mock.Anything, mock.Anything).Return(nil)
+	statusStore.On("StoreMetric", mock.Anything).Return(nil)
 
 	r := &Runner{
 		config:    config,
@@ -181,7 +181,7 @@ func TestScaleIn(t *testing.T) {
 	statusStore.On("ListSchedules").Return([]*Schedule{}, nil)
 	statusStore.On("FetchCooldownEndsAt").Return(time.Time{}, nil)
 	statusStore.On("StoreCooldownEndsAt", mock.AnythingOfType("time.Time")).Return(nil)
-	statusStore.On("StoreMetricValue", mock.Anything, mock.Anything).Return(nil)
+	statusStore.On("StoreMetric", mock.Anything).Return(nil)
 
 	r := &Runner{
 		config:    config,
