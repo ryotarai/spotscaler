@@ -65,3 +65,37 @@ func TestDiffCount(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expected, count)
 }
+
+func TestDesiredCapacityFromTotal(t *testing.T) {
+	SetCapacityTable(map[string]float64{
+		"c4.large": 10.0,
+		"m4.large": 20.0,
+		"r3.large": 30.0,
+	})
+
+	subnet := Subnet{
+		SubnetID:         "subnet-abc",
+		AvailabilityZone: "ap-northeast-1a",
+	}
+	varieties := []InstanceVariety{
+		{
+			InstanceType: "c4.large",
+			Subnet:       subnet,
+		},
+		{
+			InstanceType: "m4.large",
+			Subnet:       subnet,
+		},
+		{
+			InstanceType: "r3.large",
+			Subnet:       subnet,
+		},
+	}
+	actual, err := DesiredCapacityFromTotal(varieties, 100, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, InstanceCapacity{
+		varieties[0]: 100,
+		varieties[1]: 100,
+		varieties[2]: 120,
+	}, actual)
+}

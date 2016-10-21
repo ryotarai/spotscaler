@@ -38,9 +38,9 @@ func configForTest(cpuUtil string) *Config {
 			"m4.large": 0.3,
 			"r3.large": 0.3,
 		},
-		AcceptableTermination: 1,
-		ScaleInThreshold:      20,
-		MaximumCPUUtil:        80,
+		MaxTerminatedVarieties: 1,
+		ScaleInThreshold:       20,
+		MaxCPUUtil:             80,
 	}
 	SetCapacityTable(c.InstanceCapacityByType)
 	return c
