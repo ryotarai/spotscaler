@@ -195,10 +195,10 @@ func (r *Runner) scale() error {
 	}
 	log.Printf("[DEBUG] %d spot varieties are available", len(availableVarieties))
 
-	worstTotalSpotCapacity := spotCapacity.TotalInWorstCase(r.config.AcceptableTermination)
+	worstTotalSpotCapacity := spotCapacity.TotalInWorstCase(r.config.MaxTerminatedVarieties)
 	log.Printf("[DEBUG] in worst case, spot capacity change from %f to %f", spotCapacity.Total(), worstTotalSpotCapacity)
 
-	cpuUtilToScaleOut := r.config.MaximumCPUUtil *
+	cpuUtilToScaleOut := r.config.MaxCPUUtil *
 		(ondemandCapacity.Total() + worstTotalSpotCapacity) /
 		(ondemandCapacity.Total() + spotCapacity.Total())
 	cpuUtilToScaleIn := cpuUtilToScaleOut - r.config.ScaleInThreshold
@@ -235,8 +235,8 @@ func (r *Runner) scale() error {
 		return nil
 	}
 
-	if len(availableVarieties)-r.config.AcceptableTermination < 1 {
-		log.Printf("[ERROR] available varieties are too few against acceptable termination (%d)", r.config.AcceptableTermination)
+	if len(availableVarieties)-r.config.MaxTerminatedVarieties < 1 {
+		log.Printf("[ERROR] available varieties are too few against acceptable termination (%d)", r.config.MaxTerminatedVarieties)
 	}
 
 	schedule, err := r.getCurrentSchedule()
@@ -258,11 +258,11 @@ func (r *Runner) scale() error {
 		desiredCapacity, err = DesiredCapacityFromTargetCPUUtil(
 			availableVarieties,
 			cpuUtil,
-			r.config.MaximumCPUUtil,
+			r.config.MaxCPUUtil,
 			r.config.ScaleInThreshold/2.0,
 			ondemandCapacity.Total(),
 			spotCapacity.Total(),
-			r.config.AcceptableTermination,
+			r.config.MaxTerminatedVarieties,
 		)
 		if err != nil {
 			return err
@@ -272,7 +272,7 @@ func (r *Runner) scale() error {
 		desiredCapacity, err = DesiredCapacityFromTotal(
 			availableVarieties,
 			schedule.Capacity-ondemandCapacity.Total(),
-			r.config.AcceptableTermination,
+			r.config.MaxTerminatedVarieties,
 		)
 		if err != nil {
 			return err
@@ -281,8 +281,8 @@ func (r *Runner) scale() error {
 
 	log.Printf("[INFO] desired capacity: %v", desiredCapacity)
 
-	if r.config.MaximumCapacity > 0 && desiredCapacity.Total() > r.config.MaximumCapacity {
-		return fmt.Errorf("computed desired capacity is over MaximumCapacity %f", r.config.MaximumCapacity)
+	if r.config.MaxCapacity > 0 && desiredCapacity.Total() > r.config.MaxCapacity {
+		return fmt.Errorf("computed desired capacity is over MaxCapacity %f", r.config.MaxCapacity)
 	}
 
 	changeCount, err := spotCapacity.CountDiff(desiredCapacity)

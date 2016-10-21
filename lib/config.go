@@ -27,9 +27,9 @@ type Config struct {
 	CapacityTagKey         string              `yaml:"CapacityTagKey"`
 	ConfirmBeforeAction    bool                `yaml:"ConfirmBeforeAction"`
 	Timers                 map[string]Timer    `yaml:"Timers" validate:"dive"`
-	MaximumCPUUtil         float64             `yaml:"MaximumCPUUtil" validate:"required"`
-	MaximumCapacity        float64             `yaml:"MaximumCapacity"`
-	AcceptableTermination  int                 `yaml:"AcceptableTermination" validate:"required"`
+	MaxCPUUtil             float64             `yaml:"MaxCPUUtil" validate:"required"`
+	MaxCapacity            float64             `yaml:"MaxCapacity"`
+	MaxTerminatedVarieties int                 `yaml:"MaxTerminatedVarieties" validate:"required"`
 	ScaleInThreshold       float64             `yaml:"ScaleInThreshold" validate:"required"`
 	DryRun                 bool                `yaml:"DryRun"`
 }
