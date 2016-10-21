@@ -28,26 +28,14 @@ LaunchConfiguration:
     apt-get update
     apt-get -y install awscli
     aws --region ap-northeast-1 ec2 create-tags --resources $(curl http://169.254.169.254/latest/meta-data/instance-id) --tags Key=Status,Value=working Key=Role,Value=spot-autoscaler-sample
-InstanceVarieties:
-  - InstanceType: c4.large
-    SubnetID: subnet-dummy
+InstanceTypes:
+  - c4.large
+  - m4.large
+Subnets:
+  - SubnetID: subnet-dummy
     LaunchMethod: spot
-  - InstanceType: m4.large
-    SubnetID: subnet-dummy
+  - SubnetID: subnet-dummy
     LaunchMethod: spot
-FallbackInstanceVariety:
-  InstanceType: c4.large
-  SubnetID: subnet-dummy
-  LaunchMethod: ondemand
-ScalingPolicies:
-  - If: greaterThan
-    Threshold: 85
-    MetricType: median
-    Target: 75
-  - If: lessThan
-    Threshold: 65
-    MetricType: max
-    Target: 75
 RedisHost: localhost:6379
 RedisKeyPrefix: spot-autoscaler-sample/
 Cooldown: 5m
@@ -64,10 +52,6 @@ AMICommand:
   Command: echo
   Args: ["-n", "ami-a21529cc"]
 CapacityTagKey: Weight
-MinimumCapacity: 1
-# MaximumCapacity: 100
-# MinimumScalingRate: 0.5
-# MaximumScalingRate: 1.5
 Timers:
   Hello:
     Command:
