@@ -73,6 +73,44 @@ func (c InstanceCapacity) TotalInWorstCase(maxTerminatedVarieties int) float64 {
 	return total
 }
 
+func (cFrom InstanceCapacity) CountDiff(cTo InstanceCapacity) (map[InstanceVariety]int64, error) {
+	change := map[InstanceVariety]int64{}
+
+	for v, to := range cTo {
+		from := cFrom[v]
+		diff := to - from
+		if diff > 0 {
+			cap, err := v.Capacity()
+			if err != nil {
+				return nil, err
+			}
+
+			count := int64(math.Ceil(diff / cap))
+			change[v] = count
+		}
+	}
+
+	remain := cFrom.Total() - cTo.Total()
+	for v, from := range cFrom {
+		to := cTo[v]
+		diff := from - to
+		if diff > 0 {
+			cap, err := v.Capacity()
+			if err != nil {
+				return nil, err
+			}
+
+			diff = math.Min(remain, diff)
+			count := int64(math.Floor(diff / cap))
+			if count > 0 {
+				change[v] = count * -1
+			}
+		}
+	}
+
+	return change, nil
+}
+
 func SetCapacityTable(c map[string]float64) {
 	capacityTable = c
 }

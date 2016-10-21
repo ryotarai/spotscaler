@@ -292,8 +292,7 @@ func (r *Runner) scale() error {
 
 	log.Printf("[INFO] desired capacity: %v", desiredCapacity)
 
-	change := NewInstanceCapacityChange(spotCapacity, desiredCapacity)
-	changeCount, err := change.Count()
+	changeCount, err := spotCapacity.CountDiff(desiredCapacity)
 	if err != nil {
 		return err
 	}

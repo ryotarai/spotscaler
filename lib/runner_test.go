@@ -98,8 +98,10 @@ func TestScaleOut(t *testing.T) {
 		config.InstanceVarieties()[1]: 0.1,
 		config.InstanceVarieties()[2]: 10, // too high
 	}, nil)
-	ec2Client.On("LaunchSpotInstances", config.InstanceVarieties()[0], int64(1), "ami-abc").Return(nil)
-	ec2Client.On("LaunchSpotInstances", config.InstanceVarieties()[1], int64(2), "ami-abc").Return(nil)
+	ec2Client.On("ChangeInstances", map[InstanceVariety]int64{
+		config.InstanceVarieties()[0]: int64(1),
+		config.InstanceVarieties()[1]: int64(2),
+	}, "ami-abc", Instances{}).Return(nil)
 
 	statusStore := new(MockStatusStoreIface)
 	statusStore.On("ListSchedules").Return([]*Schedule{}, nil)
@@ -171,7 +173,9 @@ func TestScaleIn(t *testing.T) {
 		config.InstanceVarieties()[1]: 0.1,
 		config.InstanceVarieties()[2]: 10, // too high
 	}, nil)
-	ec2Client.On("TerminateInstancesByCount", instances, config.InstanceVarieties()[0], int64(1)).Return(nil)
+	ec2Client.On("ChangeInstances", map[InstanceVariety]int64{
+		config.InstanceVarieties()[0]: int64(-1),
+	}, "ami-abc", instances).Return(nil)
 
 	statusStore := new(MockStatusStoreIface)
 	statusStore.On("ListSchedules").Return([]*Schedule{}, nil)

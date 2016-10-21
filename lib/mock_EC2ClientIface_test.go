@@ -22,6 +22,20 @@ func (_m *MockEC2ClientIface) CancelOpenSIRs(reqs []*ec2.SpotInstanceRequest) er
 	return r0
 }
 
+// ChangeInstances provides a mock function with given fields: change, ami, terminationTarget
+func (_m *MockEC2ClientIface) ChangeInstances(change map[InstanceVariety]int64, ami string, terminationTarget Instances) error {
+	ret := _m.Called(change, ami, terminationTarget)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(map[InstanceVariety]int64, string, Instances) error); ok {
+		r0 = rf(change, ami, terminationTarget)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // CreateStatusTagsOfSIRs provides a mock function with given fields: reqs, status
 func (_m *MockEC2ClientIface) CreateStatusTagsOfSIRs(reqs []*ec2.SpotInstanceRequest, status string) error {
 	ret := _m.Called(reqs, status)
