@@ -249,48 +249,35 @@ func (r *Runner) scale() error {
 			return nil
 		}
 
-		desiredCapacity = InstanceCapacity{}
-		for _, v := range availableVarieties {
-			desiredCapacity[v] = 0.0
-		}
-	L1:
-		for {
-			if r.config.MaximumCapacity > 0 && ondemandCapacity.Total()+desiredCapacity.Total() > r.config.MaximumCapacity {
-				log.Printf("[WARN] over maximum capacity")
-				break L1
-			}
-
-			u := cpuUtil * (ondemandCapacity.Total() + spotCapacity.Total()) / (ondemandCapacity.Total() + desiredCapacity.Total())
-			uScaleOut := r.config.MaximumCPUUtil *
-				(ondemandCapacity.Total() + desiredCapacity.TotalInWorstCase(r.config.AcceptableTermination)) /
-				(ondemandCapacity.Total() + desiredCapacity.Total())
-			log.Printf("[TRACE] u: %f, uScaleOut: %f", u, uScaleOut)
-			if u < uScaleOut-r.config.ScaleInThreshold/2.0 {
-				break L1
-			}
-
-			desiredCapacity, err = desiredCapacity.Increment()
-			if err != nil {
-				return err
-			}
+		desiredCapacity, err = DesiredCapacityFromTargetCPUUtil(
+			availableVarieties,
+			cpuUtil,
+			r.config.MaximumCPUUtil,
+			r.config.ScaleInThreshold/2.0,
+			ondemandCapacity.Total(),
+			spotCapacity.Total(),
+			r.config.AcceptableTermination,
+		)
+		if err != nil {
+			return err
 		}
 	} else {
 		log.Println("[INFO] schedule found:", schedule)
-		desiredCapacity = InstanceCapacity{}
-	L2:
-		for {
-			if schedule.Capacity-ondemandCapacity.Total() <= desiredCapacity.TotalInWorstCase(r.config.AcceptableTermination) {
-				break L2
-			}
-
-			desiredCapacity, err = desiredCapacity.Increment()
-			if err != nil {
-				return err
-			}
+		desiredCapacity, err = DesiredCapacityFromTotal(
+			availableVarieties,
+			schedule.Capacity-ondemandCapacity.Total(),
+			r.config.AcceptableTermination,
+		)
+		if err != nil {
+			return err
 		}
 	}
 
 	log.Printf("[INFO] desired capacity: %v", desiredCapacity)
+
+	if r.config.MaximumCapacity > 0 && desiredCapacity.Total() > r.config.MaximumCapacity {
+		return fmt.Errorf("computed desired capacity is over MaximumCapacity %f", r.config.MaximumCapacity)
+	}
 
 	changeCount, err := spotCapacity.CountDiff(desiredCapacity)
 	if err != nil {

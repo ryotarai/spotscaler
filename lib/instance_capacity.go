@@ -111,6 +111,55 @@ func (cFrom InstanceCapacity) CountDiff(cTo InstanceCapacity) (map[InstanceVarie
 	return change, nil
 }
 
+func DesiredCapacityFromTargetCPUUtil(varieties []InstanceVariety, cpuUtil float64, maxCPUUtil float64, targetCPUUtilDiff float64, ondemandCapacityTotal float64, spotCapacityTotal float64, maxTerminatedVarieties int) (InstanceCapacity, error) {
+	var err error
+	desiredCapacity := InstanceCapacity{}
+	for _, v := range varieties {
+		desiredCapacity[v] = 0.0
+	}
+
+L:
+	for {
+		u := cpuUtil * (ondemandCapacityTotal + spotCapacityTotal) / (ondemandCapacityTotal + desiredCapacity.Total())
+		uScaleOut := maxCPUUtil *
+			(ondemandCapacityTotal + desiredCapacity.TotalInWorstCase(maxTerminatedVarieties)) /
+			(ondemandCapacityTotal + desiredCapacity.Total())
+		log.Printf("[TRACE] DesiredCapacityFromTargetCPUUtil u: %f, uScaleOut: %f", u, uScaleOut)
+		if u < uScaleOut-targetCPUUtilDiff {
+			break L
+		}
+
+		desiredCapacity, err = desiredCapacity.Increment()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return desiredCapacity, nil
+}
+
+func DesiredCapacityFromTotal(varieties []InstanceVariety, total float64, maxTerminatedVarieties int) (InstanceCapacity, error) {
+	var err error
+	desiredCapacity := InstanceCapacity{}
+	for _, v := range varieties {
+		desiredCapacity[v] = 0.0
+	}
+
+L:
+	for {
+		if total <= desiredCapacity.TotalInWorstCase(maxTerminatedVarieties) {
+			break L
+		}
+
+		desiredCapacity, err = desiredCapacity.Increment()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return desiredCapacity, nil
+}
+
 func SetCapacityTable(c map[string]float64) {
 	capacityTable = c
 }
