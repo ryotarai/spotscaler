@@ -17,6 +17,7 @@ type EC2ClientIface interface {
 	TerminateInstancesByCount(instances Instances, v InstanceVariety, count int64) error
 	TerminateInstances(instances Instances) error
 	LaunchSpotInstances(v InstanceVariety, c int64, ami string) error
+	ChangeInstances(change map[InstanceVariety]int64, ami string, terminationTarget Instances) error
 	DescribeWorkingInstances() (Instances, error)
 
 	DescribePendingAndActiveSIRs() ([]*ec2.SpotInstanceRequest, error)
@@ -150,6 +151,25 @@ func (c *EC2Client) LaunchSpotInstances(v InstanceVariety, count int64, ami stri
 			<-time.After(time.Duration(sleepSec) * time.Second)
 		} else {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *EC2Client) ChangeInstances(change map[InstanceVariety]int64, ami string, terminationTarget Instances) error {
+	var err error
+	for v, count := range change {
+		if count > 0 {
+			err = c.LaunchSpotInstances(v, count, ami)
+			if err != nil {
+				return err
+			}
+		} else if count < 0 {
+			err = c.TerminateInstancesByCount(terminationTarget, v, count*-1)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

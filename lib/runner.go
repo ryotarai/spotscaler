@@ -341,28 +341,18 @@ func (r *Runner) scale() error {
 		return err
 	}
 
-	for v, c := range changeCount {
-		var err error
-		err = r.confirmIfNeeded(fmt.Sprintf("%s * %d", v, c))
-		if err != nil {
-			return err
-		}
+	err = r.ec2Client.ChangeInstances(changeCount, ami, workingInstances.Managed())
+	if err != nil {
+		return err
+	}
 
+	for _, c := range changeCount {
 		if c > 0 {
 			err = r.updateTimer("LaunchingInstances")
 			if err != nil {
 				return err
 			}
-
-			err = r.ec2Client.LaunchSpotInstances(v, c, ami)
-			if err != nil {
-				return err
-			}
-		} else if c < 0 {
-			err = r.ec2Client.TerminateInstancesByCount(workingInstances.Managed(), v, c*-1)
-			if err != nil {
-				return err
-			}
+			break
 		}
 	}
 
