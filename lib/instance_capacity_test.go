@@ -99,3 +99,45 @@ func TestDesiredCapacityFromTotal(t *testing.T) {
 		varieties[2]: 120,
 	}, actual)
 }
+
+func TestDesiredCapacityFromTargetCPUUtil(t *testing.T) {
+	SetCapacityTable(map[string]float64{
+		"c4.large": 10.0,
+		"m4.large": 20.0,
+		"r3.large": 30.0,
+	})
+
+	subnet := Subnet{
+		SubnetID:         "subnet-abc",
+		AvailabilityZone: "ap-northeast-1a",
+	}
+	varieties := []InstanceVariety{
+		{
+			InstanceType: "c4.large",
+			Subnet:       subnet,
+		},
+		{
+			InstanceType: "m4.large",
+			Subnet:       subnet,
+		},
+		{
+			InstanceType: "r3.large",
+			Subnet:       subnet,
+		},
+	}
+	actual, err := DesiredCapacityFromTargetCPUUtil(
+		varieties,
+		80,
+		80,
+		10,
+		100.0,
+		100.0,
+		1,
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, InstanceCapacity{
+		varieties[0]: 70,
+		varieties[1]: 80,
+		varieties[2]: 90,
+	}, actual)
+}
