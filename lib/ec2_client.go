@@ -124,10 +124,10 @@ func (c *EC2Client) LaunchSpotInstances(v InstanceVariety, count int64, ami stri
 	}
 
 	tags := []*ec2.Tag{
-		{Key: aws.String("RequestedBy"), Value: aws.String("spot-autoscaler")},
+		{Key: aws.String("RequestedBy"), Value: aws.String(c.config.FullAutoscalerID())},
 		{Key: aws.String("spot-autoscaler:Status"), Value: aws.String("pending")},
 		{Key: aws.String(fmt.Sprintf("propagate:%s", c.config.CapacityTagKey)), Value: aws.String(fmt.Sprint(capacity))},
-		{Key: aws.String("propagate:ManagedBy"), Value: aws.String("spot-autoscaler")},
+		{Key: aws.String("propagate:ManagedBy"), Value: aws.String(c.config.FullAutoscalerID())},
 	}
 	for _, t := range c.config.InstanceTags {
 		tags = append(tags, &ec2.Tag{Key: aws.String(fmt.Sprintf("propagate:%s", t.Key)), Value: aws.String(t.Value)})
@@ -211,7 +211,7 @@ func (c *EC2Client) DescribePendingAndActiveSIRs() ([]*ec2.SpotInstanceRequest, 
 				Values: []*string{aws.String("active")},
 			}, {
 				Name:   aws.String("tag:RequestedBy"),
-				Values: []*string{aws.String("spot-autoscaler")},
+				Values: []*string{aws.String(c.config.FullAutoscalerID())},
 			}, {
 				Name:   aws.String("tag:spot-autoscaler:Status"),
 				Values: []*string{aws.String("pending")},
@@ -351,7 +351,7 @@ func (c *EC2Client) DescribeDeadSIRs() ([]*ec2.SpotInstanceRequest, error) {
 		Filters: []*ec2.Filter{
 			{
 				Name:   aws.String("tag:RequestedBy"),
-				Values: []*string{aws.String("spot-autoscaler")},
+				Values: []*string{aws.String(c.config.FullAutoscalerID())},
 			}, {
 				Name:   aws.String("state"),
 				Values: []*string{aws.String("open")},
