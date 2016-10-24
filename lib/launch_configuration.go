@@ -5,12 +5,11 @@ import (
 )
 
 type LaunchConfiguration struct {
-	KeyName                           string               `yaml:"KeyName" validate:"required"`
-	SecurityGroupIDs                  []string             `yaml:"SecurityGroupIDs" validate:"required"`
-	UserData                          string               `yaml:"UserData"`
-	IAMInstanceProfileName            string               `yaml:"IAMInstanceProfileName"`
-	InstanceInitiatedShutdownBehavior string               `yaml:"InstanceInitiatedShutdownBehavior"`
-	BlockDeviceMappings               []BlockDeviceMapping `yaml:"BlockDeviceMappings"`
+	KeyName                string               `yaml:"KeyName" validate:"required"`
+	SecurityGroupIDs       []string             `yaml:"SecurityGroupIDs" validate:"required"`
+	UserData               string               `yaml:"UserData"`
+	IAMInstanceProfileName string               `yaml:"IAMInstanceProfileName"`
+	BlockDeviceMappings    []BlockDeviceMapping `yaml:"BlockDeviceMappings"`
 }
 
 type BlockDeviceMapping struct {

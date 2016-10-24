@@ -21,7 +21,6 @@ LaunchConfiguration:
   SecurityGroupIDs:
     - sg-dummy
   IAMInstanceProfileName: YourRole
-  InstanceInitiatedShutdownBehavior: terminate # or stop
   UserData: |
     #!/bin/sh
     set -e
