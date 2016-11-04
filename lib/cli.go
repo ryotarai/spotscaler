@@ -69,7 +69,7 @@ func StartCLI() int {
 			return 1
 		}
 	} else {
-		status := NewStatusStore(config.RedisHost, config.RedisKeyPrefix)
+		status := NewStatusStore(config.RedisHost, config.FullAutoscalerID())
 		api := NewAPIServer(status)
 		api.Run(*server)
 	}

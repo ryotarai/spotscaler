@@ -27,11 +27,7 @@ type StatusStore struct {
 	KeyPrefix   string
 }
 
-func NewStatusStore(redisHost string, redisKeyPrefix string) *StatusStore {
-	if redisKeyPrefix == "" {
-		redisKeyPrefix = "spot-autoscaler/"
-	}
-
+func NewStatusStore(redisHost string, autoscalerID string) *StatusStore {
 	client := redis.NewClient(&redis.Options{
 		Addr: redisHost,
 		DB:   0,
@@ -39,7 +35,7 @@ func NewStatusStore(redisHost string, redisKeyPrefix string) *StatusStore {
 
 	return &StatusStore{
 		redisClient: client,
-		KeyPrefix:   redisKeyPrefix,
+		KeyPrefix:   fmt.Sprintf("%s/", autoscalerID),
 	}
 }
 

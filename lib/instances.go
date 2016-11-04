@@ -2,13 +2,13 @@ package autoscaler
 
 type Instances []*Instance
 
-func (is Instances) Managed() Instances {
+func (is Instances) ManagedBy(managedBy string) Instances {
 	instances := Instances{}
 
 L:
 	for _, i := range is {
 		for _, t := range i.Tags {
-			if *t.Key == "ManagedBy" && *t.Value == "spot-autoscaler" {
+			if *t.Key == "ManagedBy" && *t.Value == managedBy {
 				instances = append(instances, i)
 				continue L
 			}

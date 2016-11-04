@@ -31,7 +31,7 @@ func NewRunner(config *Config) (*Runner, error) {
 
 	runner := &Runner{
 		config:     config,
-		status:     NewStatusStore(config.RedisHost, config.RedisKeyPrefix),
+		status:     NewStatusStore(config.RedisHost, config.FullAutoscalerID()),
 		awsSession: awsSess,
 		ec2Client:  NewEC2Client(ec2.New(awsSess), config),
 	}
@@ -333,7 +333,7 @@ func (r *Runner) scale() error {
 		return err
 	}
 
-	err = r.ec2Client.ChangeInstances(changeCount, ami, workingInstances.Managed())
+	err = r.ec2Client.ChangeInstances(changeCount, ami, workingInstances.ManagedBy(r.config.FullAutoscalerID()))
 	if err != nil {
 		return err
 	}

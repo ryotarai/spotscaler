@@ -11,7 +11,8 @@ import (
 
 func configForTest(cpuUtil string) *Config {
 	c := &Config{
-		Cooldown: "5m",
+		AutoscalerID: "test",
+		Cooldown:     "5m",
 		AMICommand: Command{
 			Command: "echo",
 			Args:    []string{"-n", "ami-abc"},
@@ -132,7 +133,7 @@ func TestScaleIn(t *testing.T) {
 					AvailabilityZone: aws.String("ap-northeast-1b"),
 				},
 				Tags: []*ec2.Tag{
-					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler")},
+					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler/test")},
 				},
 			},
 		},
@@ -146,7 +147,7 @@ func TestScaleIn(t *testing.T) {
 					AvailabilityZone: aws.String("ap-northeast-1b"),
 				},
 				Tags: []*ec2.Tag{
-					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler")},
+					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler/test")},
 				},
 			},
 		},
@@ -160,7 +161,7 @@ func TestScaleIn(t *testing.T) {
 					AvailabilityZone: aws.String("ap-northeast-1b"),
 				},
 				Tags: []*ec2.Tag{
-					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler")},
+					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler/test")},
 				},
 			},
 		},

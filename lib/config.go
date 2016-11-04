@@ -1,6 +1,7 @@
 package autoscaler
 
 import (
+	"fmt"
 	"gopkg.in/go-playground/validator.v9"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -9,6 +10,7 @@ import (
 
 // Config represents configuration loaded from a file
 type Config struct {
+	AutoscalerID           string              `yaml:"AutoscalerID" validate:"required"`
 	LaunchConfiguration    LaunchConfiguration `yaml:"LaunchConfiguration" validate:"required"`
 	WorkingInstanceFilters EC2Filters          `yaml:"WorkingInstanceFilters" validate:"dive"`
 	TerminateTags          EC2Tags             `yaml:"TerminateTags" validate:"required,dive"`
@@ -19,7 +21,6 @@ type Config struct {
 	InstanceTypes          []string            `yaml:"InstanceTypes" validate:"required"`
 	Subnets                []Subnet            `yaml:"Subnets" validate:"required,dive"`
 	RedisHost              string              `yaml:"RedisHost" validate:"required"`
-	RedisKeyPrefix         string              `yaml:"RedisKeyPrefix"`
 	Cooldown               string              `yaml:"Cooldown" validate:"required"`
 	HookCommands           []Command           `yaml:"HookCommands"`
 	AMICommand             Command             `yaml:"AMICommand" validate:"required"`
@@ -32,6 +33,10 @@ type Config struct {
 	MaxTerminatedVarieties int                 `yaml:"MaxTerminatedVarieties" validate:"required"`
 	ScaleInThreshold       float64             `yaml:"ScaleInThreshold" validate:"required"`
 	DryRun                 bool                `yaml:"DryRun"`
+}
+
+func (c *Config) FullAutoscalerID() string {
+	return fmt.Sprintf("spot-autoscaler/%s", c.AutoscalerID)
 }
 
 func (c *Config) InstanceVarieties() []InstanceVariety {
