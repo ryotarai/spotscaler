@@ -1,14 +1,17 @@
 # spot-autoscaler
 
-Scale EC2 spot instances automatically.
+Autoscaler for Amazon EC2 using spot instances
+
 
 ## Usage
+
+First, create config YAML file like https://github.com/ryotarai/spot-autoscaler/blob/master/config.sample.yml
 
 ```
 $ spot-autoscaler -config config.yml [-dry-run]
 ```
 
-## API
+### HTTP API
 
 ```
 $ spot-autoscaler -config config.yml -server :8080
@@ -23,8 +26,10 @@ $ curl localhost:8080/schedules
 
 $ curl -XDELETE 'localhost:8080/schedules?key=2016-10-05T09:45:59.315042705Z'
 {"deleted":true,"key":"2016-10-05T09:45:59.315042705Z"}
+
+$ curl localhost:8080/status
 ```
 
-## Future works
+## Why not spot fleet?
 
-- [ ] Selectable scaling strategy/policy
+TODO
