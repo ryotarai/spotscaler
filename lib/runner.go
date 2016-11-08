@@ -309,6 +309,11 @@ func (r *Runner) scale() error {
 		return err
 	}
 
+	if ami == "" {
+		log.Println("[WARN] AMI is not found. Abort scaling activity")
+		return nil
+	}
+
 	err = r.confirmIfNeeded("")
 	if err != nil {
 		return err
