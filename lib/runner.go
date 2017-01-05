@@ -384,13 +384,17 @@ func (r *Runner) getCurrentSchedule() (*Schedule, error) {
 		return nil, err
 	}
 
+	var activeSchedule *Schedule
 	for _, sch := range schedules {
 		now := time.Now()
 		if now.After(sch.StartAt) && now.Before(sch.EndAt) {
-			return sch, nil
+			if activeSchedule == nil || activeSchedule.StartAt.Before(sch.StartAt) {
+				activeSchedule = sch
+			}
 		}
 	}
-	return nil, nil
+
+	return activeSchedule, nil
 }
 
 func (r *Runner) runHookCommands(event string, message string, detail interface{}) error {
