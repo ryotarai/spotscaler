@@ -12,5 +12,5 @@ test:
 
 genmock:
 	rm lib/mock_*.go
-	./genmock.sh EC2ClientIface
-	./genmock.sh StatusStoreIface
+	./scripts/genmock.sh EC2ClientIface
+	./scripts/genmock.sh StatusStoreIface
