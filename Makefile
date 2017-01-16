@@ -2,7 +2,7 @@ COMMIT = $$(git describe --always)
 
 .PHONY: build install test genmock
 build:
-	go build -ldflags "-X github.com/ryotarai/spot-autoscaler/lib.GitCommit=$(COMMIT)"
+	go build -o bin/spot-autoscaler -ldflags "-X github.com/ryotarai/spot-autoscaler/lib.GitCommit=$(COMMIT)"
 
 install:
 	go install -ldflags "-X github.com/ryotarai/spot-autoscaler/lib.GitCommit=$(COMMIT)"
