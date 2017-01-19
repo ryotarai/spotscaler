@@ -36,7 +36,7 @@ type Config struct {
 }
 
 func (c *Config) FullAutoscalerID() string {
-	return fmt.Sprintf("spot-autoscaler/%s", c.AutoscalerID)
+	return fmt.Sprintf("spotscaler/%s", c.AutoscalerID)
 }
 
 func (c *Config) InstanceVarieties() []InstanceVariety {

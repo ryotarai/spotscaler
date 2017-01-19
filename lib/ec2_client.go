@@ -125,7 +125,7 @@ func (c *EC2Client) LaunchSpotInstances(v InstanceVariety, count int64, ami stri
 
 	tags := []*ec2.Tag{
 		{Key: aws.String("RequestedBy"), Value: aws.String(c.config.FullAutoscalerID())},
-		{Key: aws.String("spot-autoscaler:Status"), Value: aws.String("pending")},
+		{Key: aws.String("spotscaler:Status"), Value: aws.String("pending")},
 		{Key: aws.String(fmt.Sprintf("propagate:%s", c.config.CapacityTagKey)), Value: aws.String(fmt.Sprint(capacity))},
 		{Key: aws.String("propagate:ManagedBy"), Value: aws.String(c.config.FullAutoscalerID())},
 	}
@@ -213,7 +213,7 @@ func (c *EC2Client) DescribePendingAndActiveSIRs() ([]*ec2.SpotInstanceRequest, 
 				Name:   aws.String("tag:RequestedBy"),
 				Values: []*string{aws.String(c.config.FullAutoscalerID())},
 			}, {
-				Name:   aws.String("tag:spot-autoscaler:Status"),
+				Name:   aws.String("tag:spotscaler:Status"),
 				Values: []*string{aws.String("pending")},
 			},
 		},
@@ -264,7 +264,7 @@ func (c *EC2Client) CreateStatusTagsOfSIRs(reqs []*ec2.SpotInstanceRequest, stat
 		DryRun:    aws.Bool(c.config.DryRun),
 		Resources: ids,
 		Tags: []*ec2.Tag{
-			{Key: aws.String("spot-autoscaler:Status"), Value: aws.String(status)},
+			{Key: aws.String("spotscaler:Status"), Value: aws.String(status)},
 		},
 	}
 

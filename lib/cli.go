@@ -26,7 +26,7 @@ func StartCLI() int {
 	SetLogLevel(*logLevel)
 
 	if *version {
-		fmt.Printf("spot-autoscaler v%s (%v)\n", Version, GitCommit)
+		fmt.Printf("spotscaler v%s (%v)\n", Version, GitCommit)
 		return 0
 	}
 

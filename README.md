@@ -1,20 +1,19 @@
-# spot-autoscaler
+# Spotscaler
 
 Autoscaler for Amazon EC2 using spot instances
 
-
 ## Usage
 
-First, create config YAML file like https://github.com/ryotarai/spot-autoscaler/blob/master/config.sample.yml
+First, create config YAML file like https://github.com/ryotarai/spotscaler/blob/master/config.sample.yml
 
 ```
-$ spot-autoscaler -config config.yml [-dry-run]
+$ spotscaler -config config.yml [-dry-run]
 ```
 
 ### HTTP API
 
 ```
-$ spot-autoscaler -config config.yml -server :8080
+$ spotscaler -config config.yml -server :8080
 ```
 
 ```

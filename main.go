@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ryotarai/spot-autoscaler/lib"
+	"github.com/ryotarai/spotscaler/lib"
 	"os"
 )
 

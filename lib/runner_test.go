@@ -133,7 +133,7 @@ func TestScaleIn(t *testing.T) {
 					AvailabilityZone: aws.String("ap-northeast-1b"),
 				},
 				Tags: []*ec2.Tag{
-					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler/test")},
+					{Key: aws.String("ManagedBy"), Value: aws.String("spotscaler/test")},
 				},
 			},
 		},
@@ -147,7 +147,7 @@ func TestScaleIn(t *testing.T) {
 					AvailabilityZone: aws.String("ap-northeast-1b"),
 				},
 				Tags: []*ec2.Tag{
-					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler/test")},
+					{Key: aws.String("ManagedBy"), Value: aws.String("spotscaler/test")},
 				},
 			},
 		},
@@ -161,7 +161,7 @@ func TestScaleIn(t *testing.T) {
 					AvailabilityZone: aws.String("ap-northeast-1b"),
 				},
 				Tags: []*ec2.Tag{
-					{Key: aws.String("ManagedBy"), Value: aws.String("spot-autoscaler/test")},
+					{Key: aws.String("ManagedBy"), Value: aws.String("spotscaler/test")},
 				},
 			},
 		},

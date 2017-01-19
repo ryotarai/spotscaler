@@ -1,4 +1,4 @@
 FROM golang:1.7
-ADD . /go/src/github.com/ryotarai/spot-autoscaler
-WORKDIR /go/src/github.com/ryotarai/spot-autoscaler
+ADD . /go/src/github.com/ryotarai/spotscaler
+WORKDIR /go/src/github.com/ryotarai/spotscaler
 RUN make install

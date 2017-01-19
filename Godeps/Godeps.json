@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/ryotarai/spot-autoscaler",
+	"ImportPath": "github.com/ryotarai/spotscaler",
 	"GoVersion": "go1.7",
 	"GodepVersion": "v77",
 	"Deps": [
