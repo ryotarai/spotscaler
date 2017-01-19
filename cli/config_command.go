@@ -17,13 +17,13 @@ func (c *ConfigCommand) Help() string {
 
 func (c *ConfigCommand) Run(args []string) int {
 	flags := flag.NewFlagSet("spotscaler", flag.ContinueOnError)
-	path := flags.String("path", "", "path")
+	path := flags.String("-config-path", "", "path")
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
 
 	if *path == "" {
-		c.ui.Error("-path is required")
+		c.ui.Error("-config-path is required")
 		return 1
 	}
 

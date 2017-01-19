@@ -16,5 +16,10 @@ func Commands() map[string]cli.CommandFactory {
 				ui: ui,
 			}, nil
 		},
+		"watch": func() (cli.Command, error) {
+			return &WatchCommand{
+				ui: ui,
+			}, nil
+		},
 	}
 }
