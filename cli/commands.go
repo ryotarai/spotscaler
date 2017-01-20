@@ -6,10 +6,17 @@ import (
 )
 
 func Commands() map[string]cli.CommandFactory {
-	ui := &cli.BasicUi{
-		Writer:      os.Stdout,
-		ErrorWriter: os.Stderr,
+	ui := &cli.PrefixedUi{
+		Ui: &cli.BasicUi{
+			Writer:      os.Stdout,
+			ErrorWriter: os.Stderr,
+		},
+		OutputPrefix: "DEBUG: ",
+		InfoPrefix:   "INFO:  ",
+		ErrorPrefix:  "ERROR: ",
+		WarnPrefix:   "WARN:  ",
 	}
+
 	return map[string]cli.CommandFactory{
 		"config": func() (cli.Command, error) {
 			return &ConfigCommand{
