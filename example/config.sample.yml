@@ -76,3 +76,5 @@ MaxTerminatedVarieties: 2
 CPUUtilCommand:
   Command: "echo"
   Args: ["ami-abc"]
+# optional
+HTTPAddr: ":8080"

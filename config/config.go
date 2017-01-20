@@ -19,6 +19,7 @@ type Config struct {
 	MaxCapacity            float64             `yaml:"MaxCapacity"`
 	MaxTerminatedVarieties int                 `yaml:"MaxTerminatedVarieties" validate:"required"`
 	ScaleInThreshold       float64             `yaml:"ScaleInThreshold" validate:"required"`
+	HTTPAddr               string              `yaml:"HTTPAddr"`
 }
 
 func NewConfig() *Config {

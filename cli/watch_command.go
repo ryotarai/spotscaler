@@ -4,7 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"github.com/mitchellh/cli"
+	"github.com/ryotarai/spotscaler/api"
 	"github.com/ryotarai/spotscaler/config"
+	"github.com/ryotarai/spotscaler/state"
 )
 
 type WatchCommand struct {
@@ -42,10 +44,16 @@ func (c *WatchCommand) Run(args []string) int {
 
 	c.ui.Info(fmt.Sprintf("Loaded config: %+v", cc))
 
-	// state := state.NewState(cc.RedisHost)
-	// apiServer := api.NewServer(state)
-	// apiServer.Start()
-	// watcher := watcher.NewWatcher(state, config)
+	state := state.NewState(cc.RedisHost)
+
+	apiServer := &api.Server{
+		Ui:    c.ui,
+		State: state,
+		Addr:  cc.HTTPAddr,
+	}
+	apiServer.Start()
+
+	// watcher := watcher.NewWatcher(state, config, ui)
 	// watcher.Start()
 
 	return 0
