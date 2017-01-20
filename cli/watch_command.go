@@ -6,6 +6,7 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/ryotarai/spotscaler/api"
 	"github.com/ryotarai/spotscaler/config"
+	"github.com/ryotarai/spotscaler/ec2"
 	"github.com/ryotarai/spotscaler/state"
 	"github.com/ryotarai/spotscaler/watcher"
 )
@@ -54,7 +55,14 @@ func (c *WatchCommand) Run(args []string) int {
 	}
 	apiServer.Start() // background
 
+	ec2, err := ec2.NewClient()
+	if err != nil {
+		c.ui.Error(fmt.Sprint(err))
+		return 1
+	}
+
 	watcher := &watcher.Watcher{
+		EC2:   ec2,
 		Ui:    c.ui,
 		State: state,
 	}

@@ -11,6 +11,4 @@ test:
 	go test -v github.com/ryotarai/spotscaler/lib
 
 genmock:
-	rm lib/mock_*.go
-	./scripts/genmock.sh EC2ClientIface
-	./scripts/genmock.sh StatusStoreIface
+	mockgen -destination ec2/ec2_mock_test.go -package ec2 github.com/aws/aws-sdk-go/service/ec2/ec2iface EC2API
