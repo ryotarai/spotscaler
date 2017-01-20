@@ -7,6 +7,7 @@ import (
 	"github.com/ryotarai/spotscaler/api"
 	"github.com/ryotarai/spotscaler/config"
 	"github.com/ryotarai/spotscaler/state"
+	"github.com/ryotarai/spotscaler/watcher"
 )
 
 type WatchCommand struct {
@@ -51,10 +52,17 @@ func (c *WatchCommand) Run(args []string) int {
 		State: state,
 		Addr:  cc.HTTPAddr,
 	}
-	apiServer.Start()
+	apiServer.Start() // background
 
-	// watcher := watcher.NewWatcher(state, config, ui)
-	// watcher.Start()
+	watcher := &watcher.Watcher{
+		Ui:    c.ui,
+		State: state,
+	}
+	err = watcher.Start()
+	if err != nil {
+		c.ui.Error(fmt.Sprint(err))
+		return 1
+	}
 
 	return 0
 }
