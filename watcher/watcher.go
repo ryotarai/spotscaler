@@ -6,12 +6,13 @@ import (
 	"github.com/ryotarai/spotscaler/config"
 	"github.com/ryotarai/spotscaler/ec2"
 	"github.com/ryotarai/spotscaler/state"
+	"strconv"
 	"time"
 )
 
 type Watcher struct {
 	Ui     cli.Ui
-	State  *state.State
+	State  state.State
 	EC2    *ec2.Client
 	Config *config.Config
 }
@@ -38,5 +39,31 @@ func (w *Watcher) RunOnce() error {
 	}
 	w.Ui.Output(fmt.Sprintf("Current working instances: %+v", currentInstances))
 
+	return nil
+}
+
+func (w *Watcher) UpdateStatus(currentInstances ec2.Instances) error {
+	currentOndemandCapacity := 0
+	for _, i := range currentInstances.FilterByLifecycle("normal") {
+		cap, err := strconv.Atoi(i.Tags[w.Config.CapacityTagKey])
+		if err != nil {
+			return err
+		}
+		currentOndemandCapacity += cap
+	}
+
+	currentSpotCapacity := 0
+	for _, i := range currentInstances.FilterByLifecycle("spot") {
+		cap, err := strconv.Atoi(i.Tags[w.Config.CapacityTagKey])
+		if err != nil {
+			return err
+		}
+		currentSpotCapacity += cap
+	}
+
+	w.State.UpdateStatus(&state.Status{
+		CurrentOndemandCapacity: currentOndemandCapacity,
+		CurrentSpotCapacity:     currentSpotCapacity,
+	})
 	return nil
 }

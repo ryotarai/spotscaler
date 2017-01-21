@@ -5,10 +5,9 @@ import (
 )
 
 type Instance struct {
-	Tags map[string]string
+	Tags      map[string]string
+	Lifecycle string // normal, spot or scheduled
 }
-
-type Instances []*Instance
 
 func NewInstanceFromSDK(instance *ec2.Instance) *Instance {
 	tags := map[string]string{}
@@ -16,7 +15,26 @@ func NewInstanceFromSDK(instance *ec2.Instance) *Instance {
 		tags[*t.Key] = *t.Value
 	}
 
-	return &Instance{
-		Tags: tags,
+	lifecycle := "normal"
+	if instance.InstanceLifecycle != nil {
+		lifecycle = *instance.InstanceLifecycle
 	}
+
+	return &Instance{
+		Tags:      tags,
+		Lifecycle: lifecycle,
+	}
+}
+
+type Instances []*Instance
+
+func (is Instances) FilterByLifecycle(lifecycle string) Instances {
+	ret := Instances{}
+	for _, i := range is {
+		if i.Lifecycle == lifecycle {
+			ret = append(ret, i)
+		}
+	}
+
+	return ret
 }

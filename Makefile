@@ -12,3 +12,4 @@ test:
 
 genmock:
 	mockgen -destination ec2/ec2_mock_test.go -package ec2 github.com/aws/aws-sdk-go/service/ec2/ec2iface EC2API
+	mockgen -destination watcher/mock_state.go -package watcher github.com/ryotarai/spotscaler/state State

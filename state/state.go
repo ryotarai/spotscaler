@@ -1,11 +1,10 @@
 package state
 
-type State struct {
-	redisHost string
+type Status struct {
+	CurrentOndemandCapacity int
+	CurrentSpotCapacity     int
 }
 
-func NewState(redisHost string) *State {
-	return &State{
-		redisHost: redisHost,
-	}
+type State interface {
+	UpdateStatus(*Status) error
 }
