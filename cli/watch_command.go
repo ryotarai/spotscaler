@@ -62,9 +62,10 @@ func (c *WatchCommand) Run(args []string) int {
 	}
 
 	watcher := &watcher.Watcher{
-		EC2:   ec2,
-		Ui:    c.ui,
-		State: state,
+		EC2:    ec2,
+		Ui:     c.ui,
+		State:  state,
+		Config: cc,
 	}
 	err = watcher.Start()
 	if err != nil {
