@@ -9,7 +9,7 @@ import (
 
 type Server struct {
 	Ui    cli.Ui
-	State *state.State
+	State state.State
 	Addr  string
 }
 

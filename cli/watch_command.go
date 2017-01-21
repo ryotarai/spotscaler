@@ -46,7 +46,7 @@ func (c *WatchCommand) Run(args []string) int {
 
 	c.ui.Info(fmt.Sprintf("Loaded config: %+v", cc))
 
-	state := state.NewState(cc.RedisHost)
+	state := state.NewRedisState(cc.RedisHost)
 
 	apiServer := &api.Server{
 		Ui:    c.ui,
