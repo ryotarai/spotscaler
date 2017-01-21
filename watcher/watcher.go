@@ -39,6 +39,14 @@ func (w *Watcher) RunOnce() error {
 	}
 	w.Ui.Output(fmt.Sprintf("Current working instances: %+v", currentInstances))
 
+	price, err := w.DescribeCurrentSpotPrice()
+	if err != nil {
+		return err
+	}
+	w.Ui.Output(fmt.Sprintf("Current spot price: %+v", price))
+
+	w.UpdateStatus(currentInstances)
+
 	return nil
 }
 
@@ -66,4 +74,18 @@ func (w *Watcher) UpdateStatus(currentInstances ec2.Instances) error {
 		CurrentSpotCapacity:     currentSpotCapacity,
 	})
 	return nil
+}
+
+func (w *Watcher) DescribeCurrentSpotPrice() (map[string]map[string]float64, error) {
+	w.Ui.Output("DescribeCurrentSpotPrice")
+	azs := []string{}
+	for _, s := range w.Config.LaunchConfiguration.Subnets {
+		azs = append(azs, s.AvailabilityZone)
+	}
+	instanceTypes := []string{}
+	for _, t := range w.Config.InstanceTypes {
+		instanceTypes = append(instanceTypes, t.InstanceTypeName)
+	}
+
+	return w.EC2.DescribeCurrentSpotPrice(azs, instanceTypes)
 }

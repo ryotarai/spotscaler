@@ -55,7 +55,7 @@ func (c *WatchCommand) Run(args []string) int {
 	}
 	apiServer.Start() // background
 
-	ec2, err := ec2.NewClient()
+	ec2, err := ec2.NewClient(c.ui)
 	if err != nil {
 		c.ui.Error(fmt.Sprint(err))
 		return 1

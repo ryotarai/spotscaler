@@ -6,7 +6,12 @@ type LaunchConfiguration struct {
 	UserData               string               `yaml:"UserData"`
 	IAMInstanceProfileName string               `yaml:"IAMInstanceProfileName"`
 	BlockDeviceMappings    []BlockDeviceMapping `yaml:"BlockDeviceMappings"`
-	Subnets                []string             `yaml:"Subnets" validate:"required"`
+	Subnets                []Subnet             `yaml:"Subnets" validate:"required"`
+}
+
+type Subnet struct {
+	AvailabilityZone string `yaml:"AvailabilityZone" validate:"required"`
+	SubnetID         string `yaml:"SubnetID" validate:"required"`
 }
 
 type BlockDeviceMapping struct {

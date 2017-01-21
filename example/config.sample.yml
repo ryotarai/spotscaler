@@ -6,18 +6,19 @@ WorkingInstanceFilters:
     Values: ["spotscaler-sample"]
   - Name: tag:Status
     Values: ["working"]
-# required: Capacity value for each instance type
-InstanceCapacityByType:
-  c4.large: 8
-  m4.large: 6.5
-# required: Bidding price for each instance type
-BiddingPriceByType:
-  c4.large: 0.101
-  m4.large: 0.174
+# required
+InstanceTypes:
+  - InstanceTypeName: c4.large
+    Capacity: 8
+    BiddingPrice: 0.101
+  - InstanceTypeName: m4.large
+    Capacity: 6.5
+    BiddingPrice: 0.174
 # required: Configuration to launch new instances
 LaunchConfiguration:
   Subnets:
-    - subnet-abc
+    - SubnetID: subnet-abc
+      AvailabilityZone: ap-northeast-1c
   BlockDeviceMappings:
     - DeviceName: /dev/sda1
       EBS:
@@ -34,10 +35,6 @@ LaunchConfiguration:
     apt-get update
     apt-get -y install awscli
     aws --region ap-northeast-1 ec2 create-tags --resources $(curl http://169.254.169.254/latest/meta-data/instance-id) --tags Key=Status,Value=working Key=Role,Value=spotscaler-sample
-# required: Instance types for new instances
-InstanceTypes:
-  - c4.large
-  - m4.large
 # required: Hostname of Redis DB
 RedisHost: localhost:6379
 # required: Duration to avoid any scaling activity after a scaling activity
