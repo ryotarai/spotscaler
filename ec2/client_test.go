@@ -24,10 +24,12 @@ func TestDescribeRunningInstances(t *testing.T) {
 				Instances: []*ec2.Instance{
 					{
 						Tags: []*ec2.Tag{
+							{Key: aws.String("Name"), Value: aws.String("instance-1")},
 							{Key: aws.String("Status"), Value: aws.String("working")},
 						},
 					}, {
 						Tags: []*ec2.Tag{
+							{Key: aws.String("Name"), Value: aws.String("instance-2")},
 							{Key: aws.String("Status"), Value: aws.String("working")},
 						},
 					},
@@ -50,5 +52,13 @@ func TestDescribeRunningInstances(t *testing.T) {
 
 	if len(instances) != 2 {
 		t.Errorf("Got %d instances, wants %d", len(instances), 2)
+	}
+
+	if instances[0].Tags["Name"] != "instance-1" {
+		t.Errorf("Got instance named %q, wants %q", instances[0].Tags["Name"], "instance-1")
+	}
+
+	if instances[1].Tags["Name"] != "instance-2" {
+		t.Errorf("Got instance named %q, wants %q", instances[1].Tags["Name"], "instance-2")
 	}
 }
