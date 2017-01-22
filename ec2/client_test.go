@@ -23,14 +23,24 @@ func TestDescribeRunningInstances(t *testing.T) {
 			{
 				Instances: []*ec2.Instance{
 					{
+						InstanceId: aws.String("i-1"),
 						Tags: []*ec2.Tag{
 							{Key: aws.String("Name"), Value: aws.String("instance-1")},
 							{Key: aws.String("Status"), Value: aws.String("working")},
 						},
+						InstanceType: aws.String("c4.large"),
+						Placement: &ec2.Placement{
+							AvailabilityZone: aws.String("ap-northeast-1a"),
+						},
 					}, {
+						InstanceId: aws.String("i-2"),
 						Tags: []*ec2.Tag{
 							{Key: aws.String("Name"), Value: aws.String("instance-2")},
 							{Key: aws.String("Status"), Value: aws.String("working")},
+						},
+						InstanceType: aws.String("m4.large"),
+						Placement: &ec2.Placement{
+							AvailabilityZone: aws.String("ap-northeast-1a"),
 						},
 					},
 				},

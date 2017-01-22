@@ -69,12 +69,10 @@ func (c *Client) DescribeRunningInstances(filters []config.EC2Filter) (Instances
 	return ret, nil
 }
 
-func (c *Client) DescribeCurrentSpotPrice(azs []string, instanceTypes []string) (map[string]map[string]float64, error) {
-	ret := map[string]map[string]float64{}
+func (c *Client) DescribeCurrentSpotPrice(azs []string, instanceTypes []string) (map[InstanceVariety]float64, error) {
+	ret := map[InstanceVariety]float64{}
 
 	for _, az := range azs {
-		ret[az] = map[string]float64{}
-
 		types := []*string{}
 		for _, t := range instanceTypes {
 			types = append(types, aws.String(t))
@@ -112,7 +110,10 @@ func (c *Client) DescribeCurrentSpotPrice(azs []string, instanceTypes []string) 
 
 				if latestPrice != 0.0 {
 					// found
-					ret[az][instanceType] = latestPrice
+					ret[InstanceVariety{
+						AvailabilityZone: az,
+						InstanceType:     instanceType,
+					}] = latestPrice
 					foundByInstanceType[instanceType] = true
 				}
 			}

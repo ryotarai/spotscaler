@@ -39,11 +39,11 @@ func (w *Watcher) RunOnce() error {
 	}
 	w.Ui.Output(fmt.Sprintf("Current working instances: %+v", currentInstances))
 
-	price, err := w.DescribeCurrentSpotPrice()
+	availableVarieties, err := w.ListAvailableInstanceVarieties()
 	if err != nil {
 		return err
 	}
-	w.Ui.Output(fmt.Sprintf("Current spot price: %+v", price))
+	w.Ui.Output(fmt.Sprintf("Available varieties: %+v", availableVarieties))
 
 	w.UpdateStatus(currentInstances)
 
@@ -76,7 +76,7 @@ func (w *Watcher) UpdateStatus(currentInstances ec2.Instances) error {
 	return nil
 }
 
-func (w *Watcher) DescribeCurrentSpotPrice() (map[string]map[string]float64, error) {
+func (w *Watcher) ListAvailableInstanceVarieties() ([]ec2.InstanceVariety, error) {
 	w.Ui.Output("DescribeCurrentSpotPrice")
 	azs := []string{}
 	for _, s := range w.Config.LaunchConfiguration.Subnets {
@@ -87,5 +87,23 @@ func (w *Watcher) DescribeCurrentSpotPrice() (map[string]map[string]float64, err
 		instanceTypes = append(instanceTypes, t.InstanceTypeName)
 	}
 
-	return w.EC2.DescribeCurrentSpotPrice(azs, instanceTypes)
+	price, err := w.EC2.DescribeCurrentSpotPrice(azs, instanceTypes)
+	if err != nil {
+		return nil, err
+	}
+
+	available := []ec2.InstanceVariety{}
+	for _, s := range w.Config.LaunchConfiguration.Subnets {
+		for _, t := range w.Config.InstanceTypes {
+			v := ec2.InstanceVariety{
+				AvailabilityZone: s.AvailabilityZone,
+				InstanceType:     t.InstanceTypeName,
+			}
+			if price[v] < t.BiddingPrice {
+				available = append(available, v)
+			}
+		}
+	}
+
+	return available, nil
 }

@@ -1,12 +1,17 @@
 package ec2
 
 import (
+	"fmt"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"sort"
+	"strconv"
 )
 
 type Instance struct {
+	ID        string
 	Tags      map[string]string
 	Lifecycle string // normal, spot or scheduled
+	Variety   InstanceVariety
 }
 
 func NewInstanceFromSDK(instance *ec2.Instance) *Instance {
@@ -20,10 +25,30 @@ func NewInstanceFromSDK(instance *ec2.Instance) *Instance {
 		lifecycle = *instance.InstanceLifecycle
 	}
 
+	variety := InstanceVariety{
+		InstanceType:     *instance.InstanceType,
+		AvailabilityZone: *instance.Placement.AvailabilityZone,
+	}
+
 	return &Instance{
+		ID:        *instance.InstanceId,
 		Tags:      tags,
 		Lifecycle: lifecycle,
+		Variety:   variety,
 	}
+}
+
+func (i *Instance) Capacity() (int, error) {
+	cap, ok := i.Tags["Capacity"]
+	if !ok {
+		return 0, fmt.Errorf("%v does not have Capacity tag", i)
+	}
+	capInt, err := strconv.Atoi(cap)
+	if err != nil {
+		return 0, err
+	}
+
+	return capInt, nil
 }
 
 type Instances []*Instance
@@ -38,3 +63,45 @@ func (is Instances) FilterByLifecycle(lifecycle string) Instances {
 
 	return ret
 }
+
+func (is Instances) WithoutTopNVarieties(numVarieties int) (Instances, error) {
+	capacityByVariety := map[InstanceVariety]int{}
+	for _, i := range is {
+		cap, err := i.Capacity()
+		if err != nil {
+			return nil, err
+		}
+		capacityByVariety[i.Variety] += cap
+	}
+
+	capacities := CapacitiesByVariety{}
+	for v, c := range capacityByVariety {
+		capacities = append(capacities, CapacityByVariety{
+			Capacity: c,
+			Variety:  v,
+		})
+	}
+	sort.Sort(capacities)
+
+	result := Instances{}
+	for _, i := range is {
+		for _, c := range capacities[0 : len(capacities)-numVarieties] {
+			if i.Variety == c.Variety {
+				result = append(result, i)
+			}
+		}
+	}
+
+	return result, nil
+}
+
+type CapacityByVariety struct {
+	Capacity int
+	Variety  InstanceVariety
+}
+
+type CapacitiesByVariety []CapacityByVariety
+
+func (a CapacitiesByVariety) Len() int           { return len(a) }
+func (a CapacitiesByVariety) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a CapacitiesByVariety) Less(i, j int) bool { return a[i].Capacity < a[j].Capacity }
