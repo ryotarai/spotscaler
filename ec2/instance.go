@@ -64,18 +64,21 @@ func (is Instances) FilterByLifecycle(lifecycle string) Instances {
 	return ret
 }
 
-func (is Instances) WithoutTopNVarieties(numVarieties int) (Instances, error) {
-	capacityByVariety := map[InstanceVariety]int{}
+func (is Instances) InWorstCase(numVarieties int) (Instances, error) {
+	spotCapacityByVariety := map[InstanceVariety]int{}
 	for _, i := range is {
+		if i.Lifecycle != "spot" {
+			continue
+		}
 		cap, err := i.Capacity()
 		if err != nil {
 			return nil, err
 		}
-		capacityByVariety[i.Variety] += cap
+		spotCapacityByVariety[i.Variety] += cap
 	}
 
 	capacities := CapacitiesByVariety{}
-	for v, c := range capacityByVariety {
+	for v, c := range spotCapacityByVariety {
 		capacities = append(capacities, CapacityByVariety{
 			Capacity: c,
 			Variety:  v,
@@ -84,8 +87,18 @@ func (is Instances) WithoutTopNVarieties(numVarieties int) (Instances, error) {
 	sort.Sort(capacities)
 
 	result := Instances{}
+	len := len(capacities) - numVarieties
+	if len < 0 {
+		len = 0
+	}
+
 	for _, i := range is {
-		for _, c := range capacities[0 : len(capacities)-numVarieties] {
+		if i.Lifecycle == "normal" {
+			result = append(result, i)
+			continue
+		}
+
+		for _, c := range capacities[0:len] {
 			if i.Variety == c.Variety {
 				result = append(result, i)
 			}

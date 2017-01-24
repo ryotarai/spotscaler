@@ -45,6 +45,12 @@ func (w *Watcher) RunOnce() error {
 	}
 	w.Ui.Output(fmt.Sprintf("Available varieties: %+v", availableVarieties))
 
+	worstCaseInstances, err := currentInstances.InWorstCase(w.Config.MaxTerminatedVarieties)
+	if err != nil {
+		return err
+	}
+	w.Ui.Output(fmt.Sprintf("Instances in the worst case: %+v", worstCaseInstances))
+
 	w.UpdateStatus(currentInstances)
 
 	return nil
