@@ -64,3 +64,21 @@ func TestInWorstCase(t *testing.T) {
 		t.Errorf("Got %v, but wants %v", filtered[2], is[2])
 	}
 }
+
+func TestTotalCapacity(t *testing.T) {
+	is := Instances{
+		{
+			Tags: map[string]string{"Capacity": "40"},
+		},
+		{
+			Tags: map[string]string{"Capacity": "10"},
+		},
+	}
+
+	c := is.TotalCapacity()
+
+	expected := 50
+	if c != expected {
+		t.Errorf("got %d, wants %d", c, expected)
+	}
+}

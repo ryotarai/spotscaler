@@ -1,7 +1,6 @@
 package ec2
 
 import (
-	"fmt"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"sort"
 	"strconv"
@@ -38,17 +37,16 @@ func NewInstanceFromSDK(instance *ec2.Instance) *Instance {
 	}
 }
 
-func (i *Instance) Capacity() (int, error) {
+func (i *Instance) Capacity() int {
 	cap, ok := i.Tags["Capacity"]
-	if !ok {
-		return 0, fmt.Errorf("%v does not have Capacity tag", i)
-	}
-	capInt, err := strconv.Atoi(cap)
-	if err != nil {
-		return 0, err
+	if ok {
+		capInt, err := strconv.Atoi(cap)
+		if err == nil {
+			return capInt
+		}
 	}
 
-	return capInt, nil
+	return 0
 }
 
 type Instances []*Instance
@@ -70,11 +68,7 @@ func (is Instances) InWorstCase(numVarieties int) (Instances, error) {
 		if i.Lifecycle != "spot" {
 			continue
 		}
-		cap, err := i.Capacity()
-		if err != nil {
-			return nil, err
-		}
-		spotCapacityByVariety[i.Variety] += cap
+		spotCapacityByVariety[i.Variety] += i.Capacity()
 	}
 
 	capacities := CapacitiesByVariety{}
@@ -106,6 +100,14 @@ func (is Instances) InWorstCase(numVarieties int) (Instances, error) {
 	}
 
 	return result, nil
+}
+
+func (is Instances) TotalCapacity() int {
+	total := 0
+	for _, i := range is {
+		total += i.Capacity()
+	}
+	return total
 }
 
 type CapacityByVariety struct {

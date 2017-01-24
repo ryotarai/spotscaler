@@ -5,8 +5,10 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/ryotarai/spotscaler/config"
 	"github.com/ryotarai/spotscaler/ec2"
+	"github.com/ryotarai/spotscaler/exec"
 	"github.com/ryotarai/spotscaler/state"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -37,7 +39,11 @@ func (w *Watcher) RunOnce() error {
 	if err != nil {
 		return err
 	}
-	w.Ui.Output(fmt.Sprintf("Current working instances: %+v", currentInstances))
+	w.Ui.Output(fmt.Sprintf("Current working instances: %s", currentInstances))
+
+	if currentInstances.TotalCapacity() == 0 {
+		return fmt.Errorf("Current working instances have no capacity")
+	}
 
 	availableVarieties, err := w.ListAvailableInstanceVarieties()
 	if err != nil {
@@ -49,37 +55,36 @@ func (w *Watcher) RunOnce() error {
 	if err != nil {
 		return err
 	}
-	w.Ui.Output(fmt.Sprintf("Instances in the worst case: %+v", worstCaseInstances))
+	w.Ui.Output(fmt.Sprintf("Instances in the worst case: %s", worstCaseInstances))
 
-	w.UpdateStatus(currentInstances)
+	scalingOutThreshold := w.Config.ScalingOutThreshold * float64(worstCaseInstances.TotalCapacity()) / float64(currentInstances.TotalCapacity())
+	scalingInThreshold := scalingOutThreshold * w.Config.ScalingInThresholdFactor
+	w.Ui.Info(fmt.Sprintf("Scaling out threshold: %f", scalingOutThreshold))
+	w.Ui.Info(fmt.Sprintf("Scaling in threshold: %f", scalingInThreshold))
+
+	metricValue, err := w.MetricValue()
+	if err != nil {
+		return err
+	}
+	w.Ui.Info(fmt.Sprintf("Current metric value: %f", metricValue))
 
 	return nil
 }
 
-func (w *Watcher) UpdateStatus(currentInstances ec2.Instances) error {
-	currentOndemandCapacity := 0
-	for _, i := range currentInstances.FilterByLifecycle("normal") {
-		cap, err := strconv.Atoi(i.Tags[w.Config.CapacityTagKey])
-		if err != nil {
-			return err
-		}
-		currentOndemandCapacity += cap
+func (w *Watcher) MetricValue() (float64, error) {
+	e := exec.Executor{
+		Command: &w.Config.MetricCommand,
+	}
+	output, err := e.Run()
+	if err != nil {
+		return 0.0, err
+	}
+	v, err := strconv.ParseFloat(strings.TrimSuffix(output, "\n"), 64)
+	if err != nil {
+		return 0.0, err
 	}
 
-	currentSpotCapacity := 0
-	for _, i := range currentInstances.FilterByLifecycle("spot") {
-		cap, err := strconv.Atoi(i.Tags[w.Config.CapacityTagKey])
-		if err != nil {
-			return err
-		}
-		currentSpotCapacity += cap
-	}
-
-	w.State.UpdateStatus(&state.Status{
-		CurrentOndemandCapacity: currentOndemandCapacity,
-		CurrentSpotCapacity:     currentSpotCapacity,
-	})
-	return nil
+	return v, nil
 }
 
 func (w *Watcher) ListAvailableInstanceVarieties() ([]ec2.InstanceVariety, error) {

@@ -2,8 +2,6 @@
 ID: sample
 # required: Filters to find working instances
 WorkingInstanceFilters:
-  - Name: tag:Role
-    Values: ["spotscaler-sample"]
   - Name: tag:Status
     Values: ["working"]
 # required
@@ -64,14 +62,14 @@ Timers:
     After: LaunchingInstances
     Duration: 2m
 # required
-MaxCPUUtil: 80
+ScalingOutThreshold: 80
 # required
-ScaleInThreshold: 60
+ScalingInThresholdFactor: 0.5
 # required
 MaxTerminatedVarieties: 2
 # required
-CPUUtilCommand:
+MetricCommand:
   Command: "echo"
-  Args: ["ami-abc"]
+  Args: ["60"]
 # optional
 HTTPAddr: ":8080"
