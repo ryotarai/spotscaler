@@ -3,9 +3,10 @@ package autoscaler
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/redis.v4"
 	"strconv"
 	"time"
+
+	"gopkg.in/redis.v4"
 )
 
 type StatusStoreIface interface {
@@ -13,7 +14,7 @@ type StatusStoreIface interface {
 	FetchCooldownEndsAt() (time.Time, error)
 	ListSchedules() ([]*Schedule, error)
 	AddSchedules(sch *Schedule) error
-	RemoveSchedules(key string) error
+	RemoveSchedule(key string) error
 	UpdateTimer(key string, t time.Time) error
 	DeleteTimer(key string) error
 	GetExpiredTimers() ([]string, error)
@@ -103,7 +104,7 @@ func (s *StatusStore) AddSchedules(sch *Schedule) error {
 	return nil
 }
 
-func (s *StatusStore) RemoveSchedules(key string) error {
+func (s *StatusStore) RemoveSchedule(key string) error {
 	_, err := s.redisClient.HDel(s.key("schedules"), key).Result()
 	if err != nil {
 		return err

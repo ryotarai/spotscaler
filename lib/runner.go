@@ -4,9 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"log"
 	"os"
 	"os/signal"
@@ -14,6 +11,10 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
 type Runner struct {
@@ -80,6 +81,11 @@ func (r *Runner) Run() error {
 	var err error
 
 	log.Println("[DEBUG] START Runner.Run")
+	if err != nil {
+		return err
+	}
+
+	err = r.removeExpiredSchedules()
 	if err != nil {
 		return err
 	}
@@ -244,6 +250,10 @@ func (r *Runner) scale() error {
 		return err
 	}
 
+	if schedule != nil {
+		log.Printf("[INFO] schedule is found: %q", schedule)
+	}
+
 	var desiredCapacity InstanceCapacity
 	if schedule == nil {
 		if cpuUtil <= cpuUtilToScaleIn {
@@ -372,6 +382,26 @@ func (r *Runner) takeCooldown() error {
 		err := r.status.StoreCooldownEndsAt(t)
 		if err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *Runner) removeExpiredSchedules() error {
+	schedules, err := r.status.ListSchedules()
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+	for _, sch := range schedules {
+		if sch.EndAt.Before(now) {
+			log.Printf("[INFO] Removing expired schedule: %s", sch.Key)
+			err := r.status.RemoveSchedule(sch.Key)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

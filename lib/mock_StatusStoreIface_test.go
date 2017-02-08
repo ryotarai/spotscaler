@@ -126,8 +126,8 @@ func (_m *MockStatusStoreIface) ListSchedules() ([]*Schedule, error) {
 	return r0, r1
 }
 
-// RemoveSchedules provides a mock function with given fields: key
-func (_m *MockStatusStoreIface) RemoveSchedules(key string) error {
+// RemoveSchedule provides a mock function with given fields: key
+func (_m *MockStatusStoreIface) RemoveSchedule(key string) error {
 	ret := _m.Called(key)
 
 	var r0 error

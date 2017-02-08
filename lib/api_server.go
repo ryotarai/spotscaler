@@ -1,8 +1,9 @@
 package autoscaler
 
 import (
-	"github.com/gin-gonic/gin"
 	"log"
+
+	"github.com/gin-gonic/gin"
 )
 
 type APIServer struct {
@@ -59,7 +60,7 @@ func (s *APIServer) deleteSchedulesHandler(c *gin.Context) {
 		return
 	}
 
-	if err := s.status.RemoveSchedules(key); err != nil {
+	if err := s.status.RemoveSchedule(key); err != nil {
 		c.String(400, "%s", err)
 		return
 	}
