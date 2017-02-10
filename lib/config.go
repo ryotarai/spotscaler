@@ -2,10 +2,11 @@ package autoscaler
 
 import (
 	"fmt"
-	"gopkg.in/go-playground/validator.v9"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
+
+	"gopkg.in/go-playground/validator.v9"
+	"gopkg.in/yaml.v2"
 )
 
 // Config represents configuration loaded from a file
@@ -32,6 +33,7 @@ type Config struct {
 	MaxCapacity            float64             `yaml:"MaxCapacity"`
 	MaxTerminatedVarieties int                 `yaml:"MaxTerminatedVarieties" validate:"required"`
 	ScaleInThreshold       float64             `yaml:"ScaleInThreshold" validate:"required"`
+	ProhibitToScaleIn      bool                `yaml:"ProhibitToScaleIn"`
 	DryRun                 bool                `yaml:"DryRun"`
 }
 

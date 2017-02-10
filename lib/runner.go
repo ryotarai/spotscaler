@@ -300,9 +300,17 @@ func (r *Runner) scale() error {
 		return err
 	}
 
+	prohibitToScaleIn := r.config.ProhibitToScaleIn
+	if prohibitToScaleIn {
+		log.Println("Scaling in is prohibited")
+	}
+
 	for v, i := range changeCount {
 		if schedule != nil && i < 0 {
 			log.Printf("[WARN] with scheduled capacity, terminating an instance is not allowed: %v * %d", v, i)
+			delete(changeCount, v)
+		} else if prohibitToScaleIn && i < 0 {
+			log.Printf("[WARN] scaling in is prohibited, terminating an instance is not allowed: %v * %d", v, i)
 			delete(changeCount, v)
 		}
 	}
