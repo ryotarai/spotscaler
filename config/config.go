@@ -6,7 +6,6 @@ type Config struct {
 	WorkingInstanceFilters   []EC2Filter         `yaml:"WorkingInstanceFilters" validate:"dive"`
 	TerminateTags            map[string]string   `yaml:"TerminateTags" validate:"required"`
 	InstanceTags             map[string]string   `yaml:"InstanceTags"`
-	InstanceTypes            []InstanceType      `yaml:"InstanceTypes" validate:"required,dive"`
 	RedisHost                string              `yaml:"RedisHost" validate:"required"`
 	CooldownDuration         string              `yaml:"Cooldown" validate:"required"`
 	HookCommands             []Command           `yaml:"HookCommands"`

@@ -1,17 +1,20 @@
 package config
 
 type LaunchConfiguration struct {
-	KeyName                string               `yaml:"KeyName" validate:"required"`
-	SecurityGroupIDs       []string             `yaml:"SecurityGroupIDs" validate:"required"`
-	UserData               string               `yaml:"UserData"`
-	IAMInstanceProfileName string               `yaml:"IAMInstanceProfileName"`
-	BlockDeviceMappings    []BlockDeviceMapping `yaml:"BlockDeviceMappings"`
-	Subnets                []Subnet             `yaml:"Subnets" validate:"required"`
+	KeyName                string                  `yaml:"KeyName" validate:"required"`
+	SecurityGroupIDs       []string                `yaml:"SecurityGroupIDs" validate:"required"`
+	UserData               string                  `yaml:"UserData"`
+	IAMInstanceProfileName string                  `yaml:"IAMInstanceProfileName"`
+	BlockDeviceMappings    []BlockDeviceMapping    `yaml:"BlockDeviceMappings"`
+	LaunchInstanceVariety  []LaunchInstanceVariety `yaml:"LaunchInstanceVariety" validate:"required"`
 }
 
-type Subnet struct {
-	AvailabilityZone string `yaml:"AvailabilityZone" validate:"required"`
-	SubnetID         string `yaml:"SubnetID" validate:"required"`
+type LaunchInstanceVariety struct {
+	InstanceType     string  `yaml:"InstanceType" validate:"required"`
+	Capacity         int     `yaml:"Capacity" validate:"required"`
+	BiddingPrice     float64 `yaml:"BiddingPrice" validate:"required"`
+	AvailabilityZone string  `yaml:"AvailabilityZone" validate:"required"`
+	SubnetID         string  `yaml:"SubnetID" validate:"required"`
 }
 
 type BlockDeviceMapping struct {

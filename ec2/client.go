@@ -1,13 +1,14 @@
 package ec2
 
 import (
+	"strconv"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/mitchellh/cli"
 	"github.com/ryotarai/spotscaler/config"
-	"strconv"
-	"time"
 )
 
 type Client struct {
@@ -69,66 +70,60 @@ func (c *Client) DescribeRunningInstances(filters []config.EC2Filter) (Instances
 	return ret, nil
 }
 
-func (c *Client) DescribeCurrentSpotPrice(azs []string, instanceTypes []string) (map[InstanceVariety]float64, error) {
-	ret := map[InstanceVariety]float64{}
+func (c *Client) DescribeCurrentSpotPrice(az string, instanceTypes []string) (map[string]float64, error) {
+	types := []*string{}
+	for _, t := range instanceTypes {
+		types = append(types, aws.String(t))
+	}
 
-	for _, az := range azs {
-		types := []*string{}
-		for _, t := range instanceTypes {
-			types = append(types, aws.String(t))
-		}
+	input := &ec2.DescribeSpotPriceHistoryInput{
+		AvailabilityZone:    aws.String(az),
+		InstanceTypes:       types,
+		ProductDescriptions: []*string{aws.String("Linux/UNIX (Amazon VPC)")},
+	}
 
-		input := &ec2.DescribeSpotPriceHistoryInput{
-			AvailabilityZone:    aws.String(az),
-			InstanceTypes:       types,
-			ProductDescriptions: []*string{aws.String("Linux/UNIX (Amazon VPC)")},
-		}
+	result := map[string]float64{}
+	foundByInstanceType := map[string]bool{}
+	var errInside error
+	err := c.ec2.DescribeSpotPriceHistoryPages(input, func(page *ec2.DescribeSpotPriceHistoryOutput, lastPage bool) bool {
+		for _, instanceType := range instanceTypes {
+			if foundByInstanceType[instanceType] {
+				// already found
+				continue
+			}
 
-		foundByInstanceType := map[string]bool{}
-		var errInside error
-		err := c.ec2.DescribeSpotPriceHistoryPages(input, func(page *ec2.DescribeSpotPriceHistoryOutput, lastPage bool) bool {
-			for _, instanceType := range instanceTypes {
-				if foundByInstanceType[instanceType] {
-					// already found
-					continue
-				}
-
-				latestTimestamp := time.Time{}
-				latestPrice := 0.0
-				for _, p := range page.SpotPriceHistory {
-					if latestTimestamp.Before(*p.Timestamp) && *p.InstanceType == instanceType && *p.AvailabilityZone == az {
-						latestTimestamp = *p.Timestamp
-						f, err := strconv.ParseFloat(*p.SpotPrice, 64)
-						if err != nil {
-							errInside = err
-							return false
-						}
-
-						latestPrice = f
+			latestTimestamp := time.Time{}
+			latestPrice := 0.0
+			for _, p := range page.SpotPriceHistory {
+				if latestTimestamp.Before(*p.Timestamp) && *p.InstanceType == instanceType {
+					latestTimestamp = *p.Timestamp
+					f, err := strconv.ParseFloat(*p.SpotPrice, 64)
+					if err != nil {
+						errInside = err
+						return false
 					}
-				}
 
-				if latestPrice != 0.0 {
-					// found
-					ret[InstanceVariety{
-						AvailabilityZone: az,
-						InstanceType:     instanceType,
-					}] = latestPrice
-					foundByInstanceType[instanceType] = true
+					latestPrice = f
 				}
 			}
 
-			return len(foundByInstanceType) < len(instanceTypes)
-		})
-
-		if errInside != nil {
-			return nil, errInside
+			if latestPrice != 0.0 {
+				// found
+				result[instanceType] = latestPrice
+				foundByInstanceType[instanceType] = true
+			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
+		return len(foundByInstanceType) < len(instanceTypes)
+	})
+
+	if errInside != nil {
+		return nil, errInside
 	}
 
-	return ret, nil
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

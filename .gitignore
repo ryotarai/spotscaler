@@ -1,2 +1,4 @@
 /bin
 *.rdb
+debug.test
+debug

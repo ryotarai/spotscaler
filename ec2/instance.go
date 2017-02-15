@@ -1,16 +1,19 @@
 package ec2
 
 import (
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"sort"
 	"strconv"
+
+	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
 type Instance struct {
-	ID        string
-	Tags      map[string]string
-	Lifecycle string // normal, spot or scheduled
-	Variety   InstanceVariety
+	ID           string
+	Tags         map[string]string
+	Lifecycle    string // normal, spot or scheduled
+	Variety      InstanceVariety
+	BiddingPrice float64
+	SubnetID     string
 }
 
 func NewInstanceFromSDK(instance *ec2.Instance) *Instance {
@@ -34,6 +37,7 @@ func NewInstanceFromSDK(instance *ec2.Instance) *Instance {
 		Tags:      tags,
 		Lifecycle: lifecycle,
 		Variety:   variety,
+		SubnetID:  *instance.SubnetId,
 	}
 }
 
@@ -62,7 +66,15 @@ func (is Instances) FilterByLifecycle(lifecycle string) Instances {
 	return ret
 }
 
-func (is Instances) InWorstCase(numVarieties int) (Instances, error) {
+func (is Instances) TotalCapacityByVariety() map[InstanceVariety]int {
+	total := map[InstanceVariety]int{}
+	for _, i := range is {
+		total[i.Variety] += i.Capacity()
+	}
+	return total
+}
+
+func (is Instances) InWorstCase(numVarieties int) Instances {
 	spotCapacityByVariety := map[InstanceVariety]int{}
 	for _, i := range is {
 		if i.Lifecycle != "spot" {
@@ -99,13 +111,23 @@ func (is Instances) InWorstCase(numVarieties int) (Instances, error) {
 		}
 	}
 
-	return result, nil
+	return result
 }
 
 func (is Instances) TotalCapacity() int {
 	total := 0
 	for _, i := range is {
 		total += i.Capacity()
+	}
+	return total
+}
+
+func (is Instances) TotalSpotCapacity() int {
+	total := 0
+	for _, i := range is {
+		if i.Lifecycle == "spot" {
+			total += i.Capacity()
+		}
 	}
 	return total
 }

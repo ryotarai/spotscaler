@@ -3,12 +3,13 @@ package cli
 import (
 	"flag"
 	"fmt"
+
 	"github.com/mitchellh/cli"
 	"github.com/ryotarai/spotscaler/api"
 	"github.com/ryotarai/spotscaler/config"
 	"github.com/ryotarai/spotscaler/ec2"
+	"github.com/ryotarai/spotscaler/scaler"
 	"github.com/ryotarai/spotscaler/state"
-	"github.com/ryotarai/spotscaler/watcher"
 )
 
 type WatchCommand struct {
@@ -61,13 +62,13 @@ func (c *WatchCommand) Run(args []string) int {
 		return 1
 	}
 
-	watcher := &watcher.Watcher{
+	scaler := &scaler.Scaler{
 		EC2:    ec2,
 		Ui:     c.ui,
 		State:  state,
 		Config: cc,
 	}
-	err = watcher.Start()
+	err = scaler.Start()
 	if err != nil {
 		c.ui.Error(fmt.Sprint(err))
 		return 1
