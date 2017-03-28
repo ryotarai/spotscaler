@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/ryotarai/spotscaler/lib"
 	"os"
+
+	"github.com/ryotarai/spotscaler/cli"
 )
 
 func main() {
-	os.Exit(autoscaler.StartCLI())
+	os.Exit(cli.Start(os.Args))
 }
