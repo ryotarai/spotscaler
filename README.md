@@ -7,13 +7,30 @@ Autoscaler for Amazon EC2 using spot instances
 **This is working in production environment in Cookpad, but still heavily under development and refactoring**
 **Documentation will be prepared in a few month**
 
-## Usage
+## Getting Started
 
-First, create config YAML file like https://github.com/ryotarai/spotscaler/blob/master/config.sample.yml
+### 1. Configurate
+
+1. Copy a sample config file: https://github.com/ryotarai/spotscaler/blob/master/config.sample.yml
+2. Edit the file along the instructions in the sample config
+3. Run validation of config: `spotscaler validate -config config.yml`
+
+### 2. Run simulation
 
 ```
-$ spotscaler -config config.yml [-dry-run]
+$ spotscaler simulate -config config.yml
 ```
+
+This shows current status and a status to be after Spotscaler runs.
+
+### 3. Start scaling
+
+```
+$ spotscaler start -config config.yml
+```
+
+This gets current status periodically and scale the instances out/in if needed.
+Spotscaler stays in foreground and you can run this with a supervisor like systemd.
 
 ### HTTP API
 
