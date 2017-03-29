@@ -3,6 +3,8 @@ package cli
 import (
 	"log"
 
+	"os"
+
 	"github.com/mitchellh/cli"
 	"github.com/ryotarai/spotscaler/spotscaler"
 )
@@ -22,9 +24,16 @@ func Start(args []string) int {
 }
 
 func commands() map[string]cli.CommandFactory {
+	logger := log.New(os.Stdout, "", log.LstdFlags)
+
 	return map[string]cli.CommandFactory{
 		"version": func() (cli.Command, error) {
 			return &versionCommand{}, nil
+		},
+		"simulate": func() (cli.Command, error) {
+			return &simulateCommand{
+				logger: logger,
+			}, nil
 		},
 	}
 }
