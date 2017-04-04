@@ -8,7 +8,12 @@ import (
 )
 
 type Config struct {
-	WorkingFilters map[string][]string `yaml:"workingFilters" validate:"required"`
+	Threshold           float64             `yaml:"threshold" validate:"required"`
+	WorkingFilters      map[string][]string `yaml:"workingFilters" validate:"required"`
+	CapacityByType      map[string]int      `yaml:"capacityByType" validate:"required"`
+	AvailabilityZones   []string            `yaml:"availabilityZones" validate:"required"`
+	PossibleTermination int                 `yaml:"possibleTermination" validate:"required"`
+	MetricCommand       *Command            `yaml:"metricCommand" validate:"required,dive"`
 }
 
 func LoadConfigYAML(path string) (*Config, error) {
@@ -30,4 +35,18 @@ func LoadConfigYAML(path string) (*Config, error) {
 	}
 
 	return config, nil
+}
+
+func (c *Config) CapacityByVariety() map[InstanceVariety]int {
+	ret := map[InstanceVariety]int{}
+	for _, az := range c.AvailabilityZones {
+		for t, c := range c.CapacityByType {
+			v := InstanceVariety{
+				AvailabilityZone: az,
+				InstanceType:     t,
+			}
+			ret[v] = c
+		}
+	}
+	return ret
 }

@@ -1,3 +1,4 @@
 /bin
 *.rdb
 /config.yml
+debug.test

@@ -1,13 +1,17 @@
 package spotscaler
 
 import (
+	"fmt"
+
+	"strconv"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
 type EC2State struct {
-	Instances []*Instance
+	Instances Instances
 }
 
 type EC2 struct {
@@ -68,13 +72,47 @@ func (e *EC2) getWorkingInstances(workingFilters map[string][]string) ([]*Instan
 	is := []*Instance{}
 	for _, r := range output.Reservations {
 		for _, i := range r.Instances {
-			is = append(is, e.newInstance(i))
+			j, err := e.newInstance(i)
+			if err != nil {
+				return nil, err
+			}
+
+			is = append(is, j)
 		}
 	}
 
 	return is, nil
 }
 
-func (e *EC2) newInstance(i *ec2.Instance) *Instance {
-	return NewInstance(*i.InstanceId)
+func (e *EC2) newInstance(i *ec2.Instance) (*Instance, error) {
+	var method InstanceLaunchMethod
+	if i.InstanceLifecycle == nil {
+		method = LaunchMethodOndemand
+	}
+	if *i.InstanceLifecycle == "spot" {
+		method = LaunchMethodSpot
+	} else {
+		return nil, fmt.Errorf("unsupported lifecycle: %s", *i.InstanceLifecycle)
+	}
+
+	var capacityTag *ec2.Tag
+	for _, t := range i.Tags {
+		if *t.Key == "Capacity" {
+			capacityTag = t
+		}
+	}
+
+	if capacityTag == nil {
+		return nil, fmt.Errorf("Capacity tag is not found")
+	}
+
+	capacity, err := strconv.Atoi(*capacityTag.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewInstance(*i.InstanceId, InstanceVariety{
+		AvailabilityZone: *i.Placement.AvailabilityZone,
+		InstanceType:     *i.InstanceType,
+	}, capacity, method), nil
 }

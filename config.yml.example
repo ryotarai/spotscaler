@@ -1,2 +1,14 @@
 workingFilters:
   'tag:Status': ['working']
+threshold: 80
+possibleTermination: 1
+capacityByType:
+  m4.large: 6
+  m4.xlarge: 13
+availabilityZones:
+  - ap-northeast-1a
+  - ap-northeast-1b
+metricCommand:
+  name: echo
+  args: ["10"]
+  
