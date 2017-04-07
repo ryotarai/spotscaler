@@ -14,6 +14,8 @@ type Config struct {
 	AvailabilityZones   []string            `yaml:"availabilityZones" validate:"required"`
 	PossibleTermination int                 `yaml:"possibleTermination" validate:"required"`
 	MetricCommand       *Command            `yaml:"metricCommand" validate:"required,dive"`
+	InitialCapacity     int                 `yaml:"initialCapacity" validate:"required"`
+	ScalingInFactor     float64             `yaml:"scalingInFactor" validate:"required"`
 }
 
 func LoadConfigYAML(path string) (*Config, error) {

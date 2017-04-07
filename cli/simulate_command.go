@@ -1,12 +1,9 @@
 package cli
 
 import (
-	"log"
-
 	"flag"
-
 	"fmt"
-
+	"log"
 	"strconv"
 
 	"github.com/ryotarai/spotscaler/spotscaler"
@@ -25,7 +22,7 @@ func (c *simulateCommand) Synopsis() string {
 }
 
 func (c *simulateCommand) Run(args []string) int {
-	configPath, verbose, err := parseFlags(args)
+	configPath, err := parseFlags(args)
 	if err != nil {
 		c.logger.Println(err)
 		return 1
@@ -35,10 +32,6 @@ func (c *simulateCommand) Run(args []string) int {
 	if err != nil {
 		c.logger.Println(err)
 		return 1
-	}
-
-	if *verbose {
-		c.logger.Println("config:", config)
 	}
 
 	c.logger.Println("Starting simulation")
@@ -69,7 +62,7 @@ func (c *simulateCommand) Run(args []string) int {
 
 	c.logger.Printf("current metric: %f", metric)
 
-	simulator, err := spotscaler.NewSimulator(metric, config.Threshold, config.CapacityByVariety(), config.PossibleTermination)
+	simulator, err := spotscaler.NewSimulator(metric, config.Threshold, config.CapacityByVariety(), config.PossibleTermination, config.InitialCapacity, config.ScalingInFactor)
 	if err != nil {
 		c.logger.Println(err)
 		return 1
@@ -91,18 +84,17 @@ func (c *simulateCommand) Run(args []string) int {
 	return 0
 }
 
-func parseFlags(args []string) (*string, *bool, error) {
+func parseFlags(args []string) (*string, error) {
 	fs := flag.NewFlagSet("spotscaler", flag.ExitOnError)
 	configPath := fs.String("config", "", "Path to config YAML file")
-	verbose := fs.Bool("verbose", false, "Output detailed log")
 	err := fs.Parse(args)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if *configPath == "" {
-		return nil, nil, fmt.Errorf("-config option is mandatory")
+		return nil, fmt.Errorf("-config option is mandatory")
 	}
 
-	return configPath, verbose, nil
+	return configPath, nil
 }
