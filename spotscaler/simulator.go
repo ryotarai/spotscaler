@@ -11,11 +11,12 @@ type Simulator struct {
 	CapacityByVariety map[InstanceVariety]int
 	InitialCapacity   int
 	ScalingInFactor   float64
+	MinimumCapacity   int
 	// Number of varieties are terminated at the same time
 	PossibleTermination int
 }
 
-func NewSimulator(metric, threshold float64, capacityByVariety map[InstanceVariety]int, possibleTermination int, initialCapacity int, scalingInFactor float64) (*Simulator, error) {
+func NewSimulator(metric, threshold float64, capacityByVariety map[InstanceVariety]int, possibleTermination int, initialCapacity int, scalingInFactor float64, minimumCapacity int) (*Simulator, error) {
 	if len(capacityByVariety) <= possibleTermination {
 		return nil, fmt.Errorf("num of varieties must be more than possibleTermination value")
 	}
@@ -31,6 +32,7 @@ func NewSimulator(metric, threshold float64, capacityByVariety map[InstanceVarie
 		PossibleTermination: possibleTermination,
 		InitialCapacity:     initialCapacity,
 		ScalingInFactor:     scalingInFactor,
+		MinimumCapacity:     minimumCapacity,
 	}, nil
 }
 
@@ -58,7 +60,7 @@ func (s *Simulator) Simulate(state *EC2State) (Instances, Instances, Instances) 
 		m := s.Metric * float64(state.Instances.TotalCapacity()) / float64(worstCapacity)
 
 		debugf("m: %f\n", m)
-		if m <= targetMetric {
+		if m <= targetMetric && worstCapacity >= s.MinimumCapacity {
 			return remaining, keep, launch
 		}
 
@@ -85,14 +87,14 @@ func (s *Simulator) Simulate(state *EC2State) (Instances, Instances, Instances) 
 		debugf("worst capacity: %f\n", worstCapacity)
 		if len(state.Instances) == 0 {
 			debugf("initial capacity: %d\n", s.InitialCapacity)
-			if worstCapacity >= s.InitialCapacity {
+			if worstCapacity >= s.InitialCapacity && worstCapacity >= s.MinimumCapacity {
 				return remaining, keep, launch
 			}
 		} else {
 			m := s.Metric * float64(state.Instances.TotalCapacity()) / float64(worstCapacity)
 
 			debugf("m: %f\n", m)
-			if m <= targetMetric {
+			if m <= targetMetric && worstCapacity >= s.MinimumCapacity {
 				return remaining, keep, launch
 			}
 		}

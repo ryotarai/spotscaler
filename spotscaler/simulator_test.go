@@ -11,7 +11,7 @@ func TestSimulateLaunch(t *testing.T) {
 	s, err := NewSimulator(80.0, 40.0, map[InstanceVariety]int{
 		c4large:   10,
 		c42xlarge: 40,
-	}, 1, 0, 0.6)
+	}, 1, 0, 0.6, 0)
 
 	if err != nil {
 		t.Fatal(err)
@@ -60,7 +60,7 @@ func TestSimulateInitialLaunch(t *testing.T) {
 	s, err := NewSimulator(80.0, 40.0, map[InstanceVariety]int{
 		c4large:   10,
 		c42xlarge: 40,
-	}, 1, 40, 0.6)
+	}, 1, 40, 0.6, 0)
 
 	if err != nil {
 		t.Fatal(err)
@@ -105,7 +105,7 @@ func TestSimulateTerminate(t *testing.T) {
 	s, err := NewSimulator(10.0, 80.0, map[InstanceVariety]int{
 		c4large:   10,
 		c42xlarge: 40,
-	}, 1, 0, 0.9)
+	}, 1, 0, 0.9, 0)
 
 	if err != nil {
 		t.Fatal(err)
