@@ -12,11 +12,12 @@ type Simulator struct {
 	InitialCapacity   int
 	ScalingInFactor   float64
 	MinimumCapacity   int
+	MaximumCapacity   int
 	// Number of varieties are terminated at the same time
 	PossibleTermination int
 }
 
-func NewSimulator(metric, threshold float64, capacityByVariety map[InstanceVariety]int, possibleTermination int, initialCapacity int, scalingInFactor float64, minimumCapacity int) (*Simulator, error) {
+func NewSimulator(metric, threshold float64, capacityByVariety map[InstanceVariety]int, possibleTermination int, initialCapacity int, scalingInFactor float64, minimumCapacity int, maximumCapacity int) (*Simulator, error) {
 	if len(capacityByVariety) <= possibleTermination {
 		return nil, fmt.Errorf("num of varieties must be more than possibleTermination value")
 	}
@@ -33,6 +34,7 @@ func NewSimulator(metric, threshold float64, capacityByVariety map[InstanceVarie
 		InitialCapacity:     initialCapacity,
 		ScalingInFactor:     scalingInFactor,
 		MinimumCapacity:     minimumCapacity,
+		MaximumCapacity:     maximumCapacity,
 	}, nil
 }
 
@@ -40,7 +42,7 @@ func NewSimulator(metric, threshold float64, capacityByVariety map[InstanceVarie
 // running instances to be terminated,
 // running instances to be remained and
 // instances to be launched
-func (s *Simulator) Simulate(state *EC2State) (Instances, Instances, Instances) {
+func (s *Simulator) Simulate(state *EC2State) (Instances, Instances, Instances, error) {
 	keep := Instances{}
 	launch := Instances{}
 
@@ -57,11 +59,15 @@ func (s *Simulator) Simulate(state *EC2State) (Instances, Instances, Instances) 
 		worstCapacity := s.worstCapacity(keep)
 		debugf("worst capacity: %f\n", worstCapacity)
 
+		if keep.TotalCapacity() > s.MaximumCapacity {
+			return nil, nil, nil, fmt.Errorf("exceeded maximum capacity (%d)", s.MaximumCapacity)
+		}
+
 		m := s.Metric * float64(state.Instances.TotalCapacity()) / float64(worstCapacity)
 
 		debugf("m: %f\n", m)
 		if m <= targetMetric && worstCapacity >= s.MinimumCapacity {
-			return remaining, keep, launch
+			return remaining, keep, launch, nil
 		}
 
 		varieties := []InstanceVariety{}
@@ -83,19 +89,23 @@ func (s *Simulator) Simulate(state *EC2State) (Instances, Instances, Instances) 
 	for {
 		all := append(keep, launch...)
 		worstCapacity := s.worstCapacity(all)
-
 		debugf("worst capacity: %f\n", worstCapacity)
+
+		if all.TotalCapacity() > s.MaximumCapacity {
+			return nil, nil, nil, fmt.Errorf("exceeded maximum capacity (%d)", s.MaximumCapacity)
+		}
+
 		if len(state.Instances) == 0 {
 			debugf("initial capacity: %d\n", s.InitialCapacity)
 			if worstCapacity >= s.InitialCapacity && worstCapacity >= s.MinimumCapacity {
-				return remaining, keep, launch
+				return remaining, keep, launch, nil
 			}
 		} else {
 			m := s.Metric * float64(state.Instances.TotalCapacity()) / float64(worstCapacity)
 
 			debugf("m: %f\n", m)
 			if m <= targetMetric && worstCapacity >= s.MinimumCapacity {
-				return remaining, keep, launch
+				return remaining, keep, launch, nil
 			}
 		}
 

@@ -62,13 +62,13 @@ func (c *simulateCommand) Run(args []string) int {
 
 	c.logger.Printf("current metric: %f", metric)
 
-	simulator, err := spotscaler.NewSimulator(metric, config.Threshold, config.CapacityByVariety(), config.PossibleTermination, config.InitialCapacity, config.ScalingInFactor, 0)
+	simulator, err := spotscaler.NewSimulator(metric, config.Threshold, config.CapacityByVariety(), config.PossibleTermination, config.InitialCapacity, config.ScalingInFactor, 0, config.MaximumCapacity)
 	if err != nil {
 		c.logger.Println(err)
 		return 1
 	}
 
-	terminate, keep, launch := simulator.Simulate(state)
+	terminate, keep, launch, err := simulator.Simulate(state)
 
 	c.logger.Println("-: will be terminated, *: will be kept, +: will be launched")
 	for _, i := range terminate {

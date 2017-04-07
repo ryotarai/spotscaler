@@ -11,4 +11,6 @@ availabilityZones:
 metricCommand:
   name: echo
   args: ["10"]
-  
+scalingInFactor: 0.6
+initialCapacity: 10
+maximumCapacity: 1000

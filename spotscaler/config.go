@@ -15,6 +15,7 @@ type Config struct {
 	PossibleTermination int                 `yaml:"possibleTermination" validate:"required"`
 	MetricCommand       *Command            `yaml:"metricCommand" validate:"required,dive"`
 	InitialCapacity     int                 `yaml:"initialCapacity" validate:"required"`
+	MaximumCapacity     int                 `yaml:"maximumCapacity" validate:"required"`
 	ScalingInFactor     float64             `yaml:"scalingInFactor" validate:"required"`
 }
 

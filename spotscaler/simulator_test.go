@@ -11,7 +11,7 @@ func TestSimulateLaunch(t *testing.T) {
 	s, err := NewSimulator(80.0, 40.0, map[InstanceVariety]int{
 		c4large:   10,
 		c42xlarge: 40,
-	}, 1, 0, 0.6, 0)
+	}, 1, 0, 0.6, 0, 1000)
 
 	if err != nil {
 		t.Fatal(err)
@@ -26,7 +26,11 @@ func TestSimulateLaunch(t *testing.T) {
 		Instances: Instances{i},
 	}
 
-	terminate, keep, launch := s.Simulate(state)
+	terminate, keep, launch, err := s.Simulate(state)
+
+	if err != nil {
+		t.Error(err)
+	}
 
 	tests := []struct {
 		want interface{}
@@ -60,7 +64,7 @@ func TestSimulateInitialLaunch(t *testing.T) {
 	s, err := NewSimulator(80.0, 40.0, map[InstanceVariety]int{
 		c4large:   10,
 		c42xlarge: 40,
-	}, 1, 40, 0.6, 0)
+	}, 1, 40, 0.6, 0, 1000)
 
 	if err != nil {
 		t.Fatal(err)
@@ -70,7 +74,11 @@ func TestSimulateInitialLaunch(t *testing.T) {
 		Instances: Instances{},
 	}
 
-	terminate, keep, launch := s.Simulate(state)
+	terminate, keep, launch, err := s.Simulate(state)
+
+	if err != nil {
+		t.Error(err)
+	}
 
 	tests := []struct {
 		want interface{}
@@ -105,7 +113,7 @@ func TestSimulateTerminate(t *testing.T) {
 	s, err := NewSimulator(10.0, 80.0, map[InstanceVariety]int{
 		c4large:   10,
 		c42xlarge: 40,
-	}, 1, 0, 0.9, 0)
+	}, 1, 0, 0.9, 0, 1000)
 
 	if err != nil {
 		t.Fatal(err)
@@ -128,7 +136,11 @@ func TestSimulateTerminate(t *testing.T) {
 		Instances: Instances{i1, i2, i3},
 	}
 
-	terminate, keep, launch := s.Simulate(state)
+	terminate, keep, launch, err := s.Simulate(state)
+
+	if err != nil {
+		t.Error(err)
+	}
 
 	tests := []struct {
 		want interface{}
