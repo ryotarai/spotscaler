@@ -12,13 +12,17 @@ import (
 
 type EC2State struct {
 	Instances Instances
+	SpotPrice map[InstanceVariety]float64
 }
 
 type EC2 struct {
-	sdk *ec2.EC2
+	SpotProductDescription string
+	Varieties              []InstanceVariety
+	WorkingFilters         map[string][]string
+	sdk                    *ec2.EC2
 }
 
-func NewEC2() (*EC2, error) {
+func NewEC2(workingFilters map[string][]string, productDescription string, varieties []InstanceVariety) (*EC2, error) {
 	sess, err := session.NewSession()
 	if err != nil {
 		return nil, err
@@ -27,18 +31,90 @@ func NewEC2() (*EC2, error) {
 	s := ec2.New(sess)
 	return &EC2{
 		sdk: s,
+		SpotProductDescription: productDescription,
+		Varieties:              varieties,
+		WorkingFilters:         workingFilters,
 	}, nil
 }
 
-func (e *EC2) GetCurrentState(workingFilters map[string][]string) (*EC2State, error) {
-	instances, err := e.getWorkingInstances(workingFilters)
+func (e *EC2) GetCurrentState() (*EC2State, error) {
+	instances, err := e.getWorkingInstances(e.WorkingFilters)
+	if err != nil {
+		return nil, err
+	}
+
+	spotPrice, err := e.getSpotPrice(e.Varieties)
 	if err != nil {
 		return nil, err
 	}
 
 	return &EC2State{
 		Instances: instances,
+		SpotPrice: spotPrice,
 	}, nil
+}
+
+func (e *EC2) getSpotPrice(varieties []InstanceVariety) (map[InstanceVariety]float64, error) {
+	result := map[InstanceVariety]float64{}
+
+	typesByAZ := map[string][]string{}
+	for _, v := range varieties {
+		typesByAZ[v.AvailabilityZone] = append(typesByAZ[v.AvailabilityZone], v.InstanceType)
+	}
+
+	for az, types := range typesByAZ {
+		input := &ec2.DescribeSpotPriceHistoryInput{
+			AvailabilityZone:    aws.String(az),
+			InstanceTypes:       aws.StringSlice(types),
+			ProductDescriptions: aws.StringSlice([]string{e.SpotProductDescription}),
+		}
+
+		priceByType := map[string]float64{}
+		var insideErr error
+		err := e.sdk.DescribeSpotPriceHistoryPages(input, func(p *ec2.DescribeSpotPriceHistoryOutput, lastPage bool) bool {
+			if len(p.SpotPriceHistory) == 0 {
+				insideErr = fmt.Errorf("cannot get current spot price in %s", az)
+				return false
+			}
+
+			for _, h := range p.SpotPriceHistory {
+				if priceByType[*h.InstanceType] != 0.0 {
+					continue
+				}
+
+				price, err := strconv.ParseFloat(*h.SpotPrice, 64)
+				if err != nil {
+					insideErr = err
+					return false
+				}
+
+				priceByType[*h.InstanceType] = price
+
+				if len(priceByType) >= len(types) {
+					return false
+				}
+			}
+			return true
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		if insideErr != nil {
+			return nil, insideErr
+		}
+
+		for t, price := range priceByType {
+			v := InstanceVariety{
+				AvailabilityZone: az,
+				InstanceType:     t,
+			}
+			result[v] = price
+		}
+	}
+
+	return result, nil
 }
 
 func (e *EC2) getWorkingInstances(workingFilters map[string][]string) ([]*Instance, error) {
@@ -49,14 +125,9 @@ func (e *EC2) getWorkingInstances(workingFilters map[string][]string) ([]*Instan
 		},
 	}
 	for n, vs := range workingFilters {
-		values := []*string{}
-		for _, v := range vs {
-			values = append(values, aws.String(v))
-		}
-
 		filters = append(filters, &ec2.Filter{
 			Name:   aws.String(n),
-			Values: values,
+			Values: aws.StringSlice(vs),
 		})
 	}
 

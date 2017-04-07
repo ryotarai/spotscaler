@@ -34,18 +34,37 @@ func (c *simulateCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.logger.Println("Starting simulation")
+	c.logger.Println("starting simulation")
 
-	ec2, err := spotscaler.NewEC2()
+	varieties := []spotscaler.InstanceVariety{}
+	for v := range config.CapacityByVariety() {
+		varieties = append(varieties, v)
+	}
+
+	ec2, err := spotscaler.NewEC2(config.WorkingFilters, config.SpotProductDescription, varieties)
 	if err != nil {
 		c.logger.Println(err)
 		return 1
 	}
 
-	state, err := ec2.GetCurrentState(config.WorkingFilters)
+	state, err := ec2.GetCurrentState()
 	if err != nil {
 		c.logger.Println(err)
 		return 1
+	}
+
+	c.logger.Printf("spot price: %v", state.SpotPrice)
+	capacityByVariety := map[spotscaler.InstanceVariety]int{}
+	for v, cap := range config.CapacityByVariety() {
+		bid := config.SpotBiddingPrice[v.InstanceType]
+		if bid == 0.0 {
+			c.logger.Printf("bidding price for %s is not configured", v.InstanceType)
+			return 1
+		}
+
+		if state.SpotPrice[v] <= bid {
+			capacityByVariety[v] = cap
+		}
 	}
 
 	s, err := config.MetricCommand.Run()
