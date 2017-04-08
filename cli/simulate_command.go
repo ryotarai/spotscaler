@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"flag"
-	"fmt"
 	"log"
 	"strconv"
 
@@ -36,12 +34,7 @@ func (c *simulateCommand) Run(args []string) int {
 
 	c.logger.Println("starting simulation")
 
-	varieties := []spotscaler.InstanceVariety{}
-	for v := range config.CapacityByVariety() {
-		varieties = append(varieties, v)
-	}
-
-	ec2, err := spotscaler.NewEC2(config.WorkingFilters, config.SpotProductDescription, varieties)
+	ec2, err := spotscaler.NewEC2(config.WorkingFilters, config.SpotProductDescription, config.SpotVarieties())
 	if err != nil {
 		c.logger.Println(err)
 		return 1
@@ -55,15 +48,15 @@ func (c *simulateCommand) Run(args []string) int {
 
 	c.logger.Printf("spot price: %v", state.SpotPrice)
 	capacityByVariety := map[spotscaler.InstanceVariety]int{}
-	for v, cap := range config.CapacityByVariety() {
-		bid := config.SpotBiddingPrice[v.InstanceType]
-		if bid == 0.0 {
-			c.logger.Printf("bidding price for %s is not configured", v.InstanceType)
-			return 1
-		}
-
-		if state.SpotPrice[v] <= bid {
-			capacityByVariety[v] = cap
+	for az, a := range config.SpotLaunchMethods {
+		for t, m := range a {
+			v := spotscaler.InstanceVariety{
+				InstanceType:     t,
+				AvailabilityZone: az,
+			}
+			if state.SpotPrice[v] <= m.BiddingPrice {
+				capacityByVariety[v] = m.Capacity
+			}
 		}
 	}
 
@@ -81,7 +74,7 @@ func (c *simulateCommand) Run(args []string) int {
 
 	c.logger.Printf("current metric: %f", metric)
 
-	simulator, err := spotscaler.NewSimulator(metric, config.Threshold, config.CapacityByVariety(), config.PossibleTermination, config.InitialCapacity, config.ScalingInFactor, 0, config.MaximumCapacity)
+	simulator, err := spotscaler.NewSimulator(metric, config.Threshold, capacityByVariety, config.PossibleTermination, config.InitialCapacity, config.ScalingInFactor, 0, config.MaximumCapacity)
 	if err != nil {
 		c.logger.Println(err)
 		return 1
@@ -101,19 +94,4 @@ func (c *simulateCommand) Run(args []string) int {
 	}
 
 	return 0
-}
-
-func parseFlags(args []string) (*string, error) {
-	fs := flag.NewFlagSet("spotscaler", flag.ExitOnError)
-	configPath := fs.String("config", "", "Path to config YAML file")
-	err := fs.Parse(args)
-	if err != nil {
-		return nil, err
-	}
-
-	if *configPath == "" {
-		return nil, fmt.Errorf("-config option is mandatory")
-	}
-
-	return configPath, nil
 }

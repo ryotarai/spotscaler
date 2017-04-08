@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"flag"
+	"fmt"
 	"log"
 
 	"os"
@@ -36,4 +38,19 @@ func commands() map[string]cli.CommandFactory {
 			}, nil
 		},
 	}
+}
+
+func parseFlags(args []string) (*string, error) {
+	fs := flag.NewFlagSet("spotscaler", flag.ExitOnError)
+	configPath := fs.String("config", "", "Path to config YAML file")
+	err := fs.Parse(args)
+	if err != nil {
+		return nil, err
+	}
+
+	if *configPath == "" {
+		return nil, fmt.Errorf("-config option is mandatory")
+	}
+
+	return configPath, nil
 }
