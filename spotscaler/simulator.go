@@ -57,7 +57,7 @@ func (s *Simulator) Simulate(state *EC2State) (Instances, Instances, Instances, 
 
 	for len(remaining) > 0 {
 		worstCapacity := s.worstCapacity(keep)
-		debugf("worst capacity: %f\n", worstCapacity)
+		debugf("worst capacity: %d\n", worstCapacity)
 
 		if keep.TotalCapacity() > s.MaximumCapacity {
 			return nil, nil, nil, fmt.Errorf("exceeded maximum capacity (%d)", s.MaximumCapacity)
@@ -89,7 +89,7 @@ func (s *Simulator) Simulate(state *EC2State) (Instances, Instances, Instances, 
 	for {
 		all := append(keep, launch...)
 		worstCapacity := s.worstCapacity(all)
-		debugf("worst capacity: %f\n", worstCapacity)
+		debugf("worst capacity: %d\n", worstCapacity)
 
 		if all.TotalCapacity() > s.MaximumCapacity {
 			return nil, nil, nil, fmt.Errorf("exceeded maximum capacity (%d)", s.MaximumCapacity)
