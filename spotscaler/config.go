@@ -16,7 +16,7 @@ type Config struct {
 	MaximumCapacity        int                                    `yaml:"maximumCapacity" validate:"required"`
 	ScalingInFactor        float64                                `yaml:"scalingInFactor" validate:"required"`
 	SpotProductDescription string                                 `yaml:"spotProductDescription" validate:"required"`
-	SpotLaunchMethods      map[string]map[string]SpotLaunchMethod `yaml:"spotLaunchMethods" validate:"required,dive"`
+	SpotLaunchMethods      map[string]map[string]SpotLaunchMethod `yaml:"spotLaunchMethods" validate:"required"`
 }
 
 type SpotLaunchMethod struct {
