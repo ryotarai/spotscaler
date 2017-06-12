@@ -42,8 +42,10 @@ InstanceTypes:
 Subnets:
   - SubnetID: subnet-dummy
     LaunchMethod: spot
+    AvailabilityZone: az
   - SubnetID: subnet-dummy
     LaunchMethod: spot
+    AvailabilityZone: az
 # required: Hostname of Redis DB
 RedisHost: localhost:6379
 # required: Duration to avoid any scaling activity after a scaling activity
@@ -58,6 +60,16 @@ AMICommand:
   Args: ["-n", "ami-a21529cc"]
 # required: Key of capacity tag
 CapacityTagKey: Weight
+# required: Max of CPU utilization percentage
+MaxCPUUtil: 80
+# required: Max num of varieties can be terminated at the same time
+MaxTerminatedVarieties: 1
+# required: Command to get CPU util value
+CPUUtilCommand:
+  Command: echo
+  Args: ["90"]
+# required
+ScaleInThreshold: 20
 # optional: Tags new instances have
 InstanceTags:
   - Key: Hello
