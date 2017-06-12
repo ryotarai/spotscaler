@@ -255,37 +255,45 @@ func (r *Runner) scale() error {
 	}
 
 	var desiredCapacity InstanceCapacity
-	if schedule == nil {
-		if cpuUtil <= cpuUtilToScaleIn {
-			log.Println("[DEBUG] scaling in")
-		} else if cpuUtilToScaleOut <= cpuUtil {
-			log.Println("[DEBUG] scaling out")
-		} else {
-			log.Println("[DEBUG] skip both scaling in and scaling out")
-			return nil
-		}
-
-		desiredCapacity, err = DesiredCapacityFromTargetCPUUtil(
-			availableVarieties,
-			cpuUtil,
-			r.config.MaxCPUUtil,
-			r.config.ScaleInThreshold/2.0,
-			ondemandCapacity.Total(),
-			spotCapacity.Total(),
-			r.config.MaxTerminatedVarieties,
-		)
-		if err != nil {
-			return err
-		}
+	if cpuUtil <= cpuUtilToScaleIn {
+		log.Println("[DEBUG] scaling in")
+	} else if cpuUtilToScaleOut <= cpuUtil {
+		log.Println("[DEBUG] scaling out")
 	} else {
+		log.Println("[DEBUG] skip both scaling in and scaling out")
+		return nil
+	}
+
+	desiredCapacity, err = DesiredCapacityFromTargetCPUUtil(
+		availableVarieties,
+		cpuUtil,
+		r.config.MaxCPUUtil,
+		r.config.ScaleInThreshold/2.0,
+		ondemandCapacity.Total(),
+		spotCapacity.Total(),
+		r.config.MaxTerminatedVarieties,
+	)
+	if err != nil {
+		return err
+	}
+
+	if schedule != nil {
 		log.Println("[INFO] schedule found:", schedule)
-		desiredCapacity, err = DesiredCapacityFromTotal(
+		dc, err := DesiredCapacityFromTotal(
 			availableVarieties,
 			schedule.Capacity-ondemandCapacity.Total(),
 			r.config.MaxTerminatedVarieties,
 		)
 		if err != nil {
 			return err
+		}
+
+		log.Printf("[DEBUG] capacity calculated from CPU util: %v", desiredCapacity)
+		log.Printf("[DEBUG] capacity calculated from schedule: %v", dc)
+
+		mtv := r.config.MaxTerminatedVarieties
+		if dc.TotalInWorstCase(mtv) > desiredCapacity.TotalInWorstCase(mtv) {
+			desiredCapacity = dc
 		}
 	}
 
