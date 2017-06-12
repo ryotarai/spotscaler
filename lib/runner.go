@@ -250,16 +250,12 @@ func (r *Runner) scale() error {
 		return err
 	}
 
-	if schedule != nil {
-		log.Printf("[INFO] schedule is found: %q", schedule)
-	}
-
 	var desiredCapacity InstanceCapacity
 	if cpuUtil <= cpuUtilToScaleIn {
 		log.Println("[DEBUG] scaling in")
 	} else if cpuUtilToScaleOut <= cpuUtil {
 		log.Println("[DEBUG] scaling out")
-	} else {
+	} else if schedule == nil {
 		log.Println("[DEBUG] skip both scaling in and scaling out")
 		return nil
 	}
@@ -278,7 +274,7 @@ func (r *Runner) scale() error {
 	}
 
 	if schedule != nil {
-		log.Println("[INFO] schedule found:", schedule)
+		log.Printf("[INFO] schedule found: %#v", schedule)
 		dc, err := DesiredCapacityFromTotal(
 			availableVarieties,
 			schedule.Capacity-ondemandCapacity.Total(),
