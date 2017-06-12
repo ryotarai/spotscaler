@@ -1,7 +1,5 @@
 # Spotscaler
 
-[![Docker Repository on Quay](https://quay.io/repository/ryotarai/spotscaler/status "Docker Repository on Quay")](https://quay.io/repository/ryotarai/spotscaler)
-
 Autoscaler for Amazon EC2 using spot instances
 
 **This is working in production environment in Cookpad, but still heavily under development and refactoring**
