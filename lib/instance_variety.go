@@ -1,5 +1,7 @@
 package autoscaler
 
+import "fmt"
+
 type InstanceVariety struct {
 	InstanceType string
 	Subnet       Subnet
@@ -28,5 +30,17 @@ func (s SortInstanceVarietiesByCapacity) Less(i, j int) bool {
 		panic(err)
 	}
 
-	return ic < jc
+	if ic != jc {
+		return ic < jc
+	}
+
+	if s[i].Subnet != s[j].Subnet {
+		return s[i].Subnet.SubnetID < s[j].Subnet.SubnetID
+	}
+
+	if s[i].InstanceType != s[j].InstanceType {
+		return s[i].InstanceType < s[j].InstanceType
+	}
+
+	panic(fmt.Sprintf("%#v and %#v must be different", s[i], s[j]))
 }
