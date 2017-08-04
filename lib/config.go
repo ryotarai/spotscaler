@@ -31,6 +31,7 @@ type Config struct {
 	Timers                 map[string]Timer    `yaml:"Timers" validate:"dive"`
 	MaxCPUUtil             float64             `yaml:"MaxCPUUtil" validate:"required"`
 	MaxCapacity            float64             `yaml:"MaxCapacity"`
+	MinCapacity            float64             `yaml:"MinCapacity"`
 	MaxTerminatedVarieties int                 `yaml:"MaxTerminatedVarieties" validate:"required"`
 	ScaleInThreshold       float64             `yaml:"ScaleInThreshold" validate:"required"`
 	ProhibitToScaleIn      bool                `yaml:"ProhibitToScaleIn"`

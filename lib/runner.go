@@ -303,6 +303,10 @@ func (r *Runner) scale() error {
 		return fmt.Errorf("computed desired capacity is over MaxCapacity %f", r.config.MaxCapacity)
 	}
 
+	if desiredCapacity.Total() <= r.config.MinCapacity {
+		return fmt.Errorf("computed desired capacity is below MinCapacity %f <= %f", desiredCapacity.Total(), r.config.MinCapacity)
+	}
+
 	changeCount, err := spotCapacity.CountDiff(desiredCapacity)
 	if err != nil {
 		return err
