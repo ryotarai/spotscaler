@@ -259,7 +259,7 @@ func (r *Runner) scale() error {
 		log.Println("[DEBUG] scaling in")
 	} else if cpuUtilToScaleOut <= cpuUtil {
 		log.Println("[DEBUG] scaling out")
-	} else {
+	} else if schedule == nil {
 		log.Println("[DEBUG] skip both scaling in and scaling out")
 		return nil
 	}
