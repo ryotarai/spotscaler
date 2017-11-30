@@ -3,14 +3,14 @@ package autoscaler
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"log"
-	"math"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 )
 
 type EC2ClientIface interface {
@@ -77,82 +77,65 @@ func (c *EC2Client) TerminateInstances(instances Instances) error {
 }
 
 func (c *EC2Client) LaunchSpotInstances(v InstanceVariety, count int64, ami string) error {
-	securityGroupIds := []*string{}
-	for _, i := range c.config.LaunchConfiguration.SecurityGroupIDs {
-		securityGroupIds = append(securityGroupIds, aws.String(i))
-	}
-
-	biddingPrice, ok := c.config.BiddingPriceByType[v.InstanceType]
-	if !ok {
-		return fmt.Errorf("Bidding price for %s is unknown", v.InstanceType)
-	}
-
 	userData := base64.StdEncoding.EncodeToString([]byte(c.config.LaunchConfiguration.UserData))
-
-	requestSpotInstancesParams := &ec2.RequestSpotInstancesInput{
-		DryRun:        aws.Bool(c.config.DryRun),
-		SpotPrice:     aws.String(fmt.Sprintf("%f", biddingPrice)),
-		InstanceCount: aws.Int64(count),
-		LaunchSpecification: &ec2.RequestSpotLaunchSpecification{
-			ImageId:          aws.String(ami),
-			InstanceType:     aws.String(v.InstanceType),
-			KeyName:          aws.String(c.config.LaunchConfiguration.KeyName),
-			SecurityGroupIds: securityGroupIds,
-			SubnetId:         aws.String(v.Subnet.SubnetID),
-			UserData:         aws.String(userData),
-			IamInstanceProfile: &ec2.IamInstanceProfileSpecification{
-				Name: aws.String(c.config.LaunchConfiguration.IAMInstanceProfileName),
-			},
-			BlockDeviceMappings: c.config.LaunchConfiguration.SDKBlockDeviceMappings(),
-		},
-	}
-	log.Printf("[INFO] requesting spot instances: %s", requestSpotInstancesParams)
-
-	resp, err := c.ec2.RequestSpotInstances(requestSpotInstancesParams)
-	if err != nil {
-		return err
-	}
-
-	ids := []*string{}
-	for _, req := range resp.SpotInstanceRequests {
-		ids = append(ids, req.SpotInstanceRequestId)
-	}
-
 	capacity, err := v.Capacity()
 	if err != nil {
 		return err
 	}
 
 	tags := []*ec2.Tag{
-		{Key: aws.String("RequestedBy"), Value: aws.String(c.config.FullAutoscalerID())},
-		{Key: aws.String("spotscaler:Status"), Value: aws.String("pending")},
-		{Key: aws.String(fmt.Sprintf("propagate:%s", c.config.CapacityTagKey)), Value: aws.String(fmt.Sprint(capacity))},
-		{Key: aws.String("propagate:ManagedBy"), Value: aws.String(c.config.FullAutoscalerID())},
+		{Key: aws.String("ManagedBy"), Value: aws.String(c.config.FullAutoscalerID())},
+		{Key: aws.String(c.config.CapacityTagKey), Value: aws.String(fmt.Sprint(capacity))},
 	}
+
 	for _, t := range c.config.InstanceTags {
-		tags = append(tags, &ec2.Tag{Key: aws.String(fmt.Sprintf("propagate:%s", t.Key)), Value: aws.String(t.Value)})
+		tags = append(tags, &ec2.Tag{Key: aws.String(t.Key), Value: aws.String(t.Value)})
 	}
 
-	createTagsParams := &ec2.CreateTagsInput{
-		DryRun:    aws.Bool(c.config.DryRun),
-		Resources: ids,
-		Tags:      tags,
+	input := &ec2.RunInstancesInput{
+		DryRun: aws.Bool(c.config.DryRun),
+		InstanceMarketOptions: &ec2.InstanceMarketOptionsRequest{
+			MarketType: aws.String("spot"),
+			SpotOptions: &ec2.SpotMarketOptions{
+				MaxPrice: aws.String(strconv.FormatFloat(c.config.BiddingPriceByType[v.InstanceType], 'f', -1, 64)),
+			},
+		},
+		MinCount:         aws.Int64(count),
+		MaxCount:         aws.Int64(count),
+		ImageId:          aws.String(ami),
+		InstanceType:     aws.String(v.InstanceType),
+		KeyName:          aws.String(c.config.LaunchConfiguration.KeyName),
+		SecurityGroupIds: aws.StringSlice(c.config.LaunchConfiguration.SecurityGroupIDs),
+		SubnetId:         aws.String(v.Subnet.SubnetID),
+		UserData:         aws.String(userData),
+		IamInstanceProfile: &ec2.IamInstanceProfileSpecification{
+			Name: aws.String(c.config.LaunchConfiguration.IAMInstanceProfileName),
+		},
+		BlockDeviceMappings: c.config.LaunchConfiguration.SDKBlockDeviceMappings(),
+		TagSpecifications: []*ec2.TagSpecification{
+			{
+				ResourceType: aws.String("instance"),
+				Tags:         tags,
+			},
+			{
+				ResourceType: aws.String("volume"),
+				Tags:         tags,
+			},
+		},
 	}
 
-	retry := 4
-	for i := 0; i < retry; i++ {
-		_, err = c.ec2.CreateTags(createTagsParams)
-		if err == nil {
-			break
-		}
-		if i < retry-1 {
-			sleepSec := int(math.Pow(2, float64(i)))
-			log.Printf("[INFO] CreateTags failed, will retry after %d sec: %s", sleepSec, err)
-			<-time.After(time.Duration(sleepSec) * time.Second)
-		} else {
-			return err
-		}
+	log.Printf("[INFO] launching instances: %s", input)
+
+	reservation, err := c.ec2.RunInstances(input)
+	if err != nil {
+		return err
 	}
+
+	instanceIDs := []string{}
+	for _, i := range reservation.Instances {
+		instanceIDs = append(instanceIDs, *i.InstanceId)
+	}
+	log.Printf("[INFO] Launched %s", strings.Join(instanceIDs, ", "))
 
 	return nil
 }
