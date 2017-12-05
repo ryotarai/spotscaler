@@ -3,9 +3,10 @@ package autoscaler
 import (
 	"flag"
 	"fmt"
-	"github.com/hashicorp/logutils"
 	"log"
 	"os"
+
+	"github.com/hashicorp/logutils"
 )
 
 func init() {
@@ -17,7 +18,6 @@ func init() {
 func StartCLI() int {
 	configPath := flag.String("config", "", "config file")
 	confirmBeforeAction := flag.Bool("confirm-before-action", false, "confirmation before important actions")
-	server := flag.String("server", "", "start API server")
 	version := flag.Bool("version", false, "show version")
 	logLevel := flag.String("log-level", "DEBUG", "log level (one of TRACE, DEBUG, INFO, WARN and ERROR)")
 	dryRun := flag.Bool("dry-run", false, "dry run mode")
@@ -55,23 +55,22 @@ func StartCLI() int {
 
 	log.Printf("[DEBUG] loaded config: %+v", config)
 
-	if *server == "" {
-		runner, err := NewRunner(config)
-		if err != nil {
-			log.Println(err)
-			return 1
-		}
+	runner, err := NewRunner(config)
+	if err != nil {
+		log.Println(err)
+		return 1
+	}
 
-		err = runner.StartLoop()
+	if config.APIAddr != "" {
+		api := NewAPIServer(runner.status)
+		api.Run(config.APIAddr)
+	}
 
-		if err != nil {
-			log.Println(err)
-			return 1
-		}
-	} else {
-		status := NewStatusStore(config.RedisHost, config.FullAutoscalerID())
-		api := NewAPIServer(status)
-		api.Run(*server)
+	err = runner.StartLoop()
+
+	if err != nil {
+		log.Println(err)
+		return 1
 	}
 
 	return 0
