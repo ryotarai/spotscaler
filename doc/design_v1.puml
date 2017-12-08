@@ -1,0 +1,101 @@
+@startuml Spotscaler
+
+' Participants are sorted by https://gist.github.com/ryotarai/3ad29d5b947ca079ddc03e3a0174cd5d
+participant Scaler
+participant Simulator
+participant Storage
+participant Converger
+participant EC2
+participant MetricCommand
+participant TimerCommand
+participant EventCommand
+participant API
+
+note right of Storage
+    Persistent storage like Redis
+end note
+note right of API
+    API provides /metrics endpoint
+end note
+
+[-> Scaler: Start()
+loop Run()
+    == Run timers ==
+
+    Scaler -> Storage: GetExpiredTimers()
+    Scaler <-- Storage: Timers
+    Scaler -> TimerCommand: Run()
+
+    == Get a metric value from an external command ==
+
+    Scaler -> MetricCommand: GetFloat()
+    Scaler <-- MetricCommand: Metric like CPU util
+    Scaler -> API: UpdateMetric(metric)
+
+    == Getting current instance state ==
+
+    Scaler -> EC2: GetInstanceState()
+        EC2 -> EC2: DescribeInstances()
+    Scaler <-- EC2: Current State
+    note left
+        State contains instance ID,
+        availability zone,
+        capacity and
+        type (ondemand/spot)
+        of each instance
+    end note
+
+    Scaler -> API: UpdateCapacity(state.Capacity)
+
+    == Simulate the worst state from the current state ==
+
+    Scaler -> Simulator: WorstState(currentState, metric)
+    Scaler <-- Simulator: Worst State
+    Scaler -> API: UpdateWorstCapacity(worstState.Capacity)
+
+    Scaler -> Simulator: WorstMetric(currentState, worstState, metric)
+    Scaler <-- Simulator: Worst Metric
+    Scaler -> API: UpdateWorstMetric(worstMetric)
+
+    == Check if an active schedule exists ==
+
+    Scaler -> Storage: GetActiveSchedule()
+    Scaler <-- Storage: Active Schedule or nil
+    group If an active schedule exists
+        Scaler -> Simulator: DesiredStateFromCapacity(currentState, schedule.capacity)
+        note right: Keep the running instances first
+        Scaler <-- Simulator: Scheduled State(A)
+    end
+
+    group If the worst metric value is under or over the threshold
+        == Simulate desired state ==
+        Scaler -> Simulator: DesiredStateFromMetric(currentState, metric)
+        note right: Keep the running instances first
+        Scaler <-- Simulator: Desired State(B)
+    end
+
+    group If Scheduled State(A) or Desired State(B) is set
+        == Launch or terminate instances ==
+        Scaler -> Scaler: desiredCapacity = max by capacity(scheudledState, desiredState)
+        group If desiredState > currentState
+            Scaler -> Converger: Launch(currentState, desiredCapacity)
+                Converger -> EC2: RunInstances()
+                Converger <- EC2
+            Scaler <- Converger
+            Scaler -> Storage: UpdateCooldownPeriod()
+        else if desiredState != scheduledState (prevent to scale in by a schedule)
+            Scaler -> Converger: Terminate(currentState, desiredCapacity)
+                Converger -> EC2: Tag() Terminate tag
+                Converger <- EC2
+            Scaler <- Converger
+        end
+        Scaler -> EventCommand: FireEvent()
+        Scaler -> Storage: AddTimer()
+    end
+
+    == Sleep until the next run ==
+
+    Scaler -> Scaler: Sleep
+end
+
+@enduml
