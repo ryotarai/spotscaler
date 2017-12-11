@@ -26,4 +26,5 @@ func NewScaler(c *Config) (*Scaler, error) {
 
 func (s *Scaler) Start() {
 	s.logger.Infof("Starting Spotscaler v%s", Version)
+	s.logger.Debugf("Loaded config is %#v", s.config)
 }

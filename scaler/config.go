@@ -10,6 +10,12 @@ type Config struct {
 	LogLevel string `yaml:"LogLevel"`
 }
 
+func NewConfig() *Config {
+	return &Config{
+		LogLevel: "info",
+	}
+}
+
 func NewConfigFromFile(path string) (*Config, error) {
 	var err error
 
@@ -18,7 +24,7 @@ func NewConfigFromFile(path string) (*Config, error) {
 		return nil, err
 	}
 
-	c := &Config{}
+	c := NewConfig()
 	err = yaml.UnmarshalStrict(b, c)
 	if err != nil {
 		return nil, err
