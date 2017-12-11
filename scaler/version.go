@@ -1,4 +1,4 @@
-package cli
+package scaler
 
 const Version string = "1.0.0.dev"
 
