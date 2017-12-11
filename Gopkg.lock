@@ -122,9 +122,10 @@
   version = "v4.1.10"
 
 [[projects]]
+  branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "f7716cbe52baa25d2e9b0d0da546fcf909fc16b4"
+  revision = "287cf08546ab5e7e37d55a84f7ed3fd1db036de5"
 
 [solve-meta]
   analyzer-name = "dep"
