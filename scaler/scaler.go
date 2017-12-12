@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ryotarai/spotscaler/ec2"
 	"github.com/ryotarai/spotscaler/httpapi"
 	"github.com/sirupsen/logrus"
 )
@@ -12,6 +13,7 @@ type Scaler struct {
 	logger *logrus.Logger
 	config *Config
 	api    *httpapi.Handler
+	ec2    *ec2.EC2
 }
 
 func NewScaler(c *Config) (*Scaler, error) {
@@ -27,6 +29,7 @@ func NewScaler(c *Config) (*Scaler, error) {
 		logger: logger,
 		config: c,
 		api:    httpapi.NewHandler(),
+		ec2:    ec2.New(),
 	}, nil
 }
 
