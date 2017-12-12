@@ -9,9 +9,11 @@ import (
 )
 
 type Config struct {
-	LogLevel      string           `yaml:"LogLevel"`
-	MetricCommand *command.Command `yaml:"MetricCommand" validate:"required"`
-	APIAddr       string           `yaml:"APIAddr"`
+	LogLevel       string              `yaml:"LogLevel"`
+	MetricCommand  *command.Command    `yaml:"MetricCommand" validate:"required"`
+	APIAddr        string              `yaml:"APIAddr"`
+	CapacityTagKey string              `yaml:"CapacityTagKey" validate:"required"`
+	WorkingFilters map[string][]string `yaml:"WorkingFilters" validate:"required"`
 }
 
 func NewConfig() *Config {

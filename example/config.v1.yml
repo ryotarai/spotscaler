@@ -3,3 +3,6 @@ MetricCommand:
   Path: "/bin/echo"
   Args: ["50"]
 APIAddr: 127.0.0.1:9000
+CapacityTagKey: Capacity
+WorkingFilters:
+  "tag:Role": ["spotscaler-example"]

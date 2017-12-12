@@ -25,15 +25,7 @@ func New() *EC2 {
 	}
 }
 
-type Instance struct {
-	InstanceID       string
-	InstanceType     string
-	AvailabilityZone string
-	Capacity         float64
-	Market           string // ondemand, spot
-}
-
-func (e *EC2) GetInstances() ([]*Instance, error) {
+func (e *EC2) GetInstances() (Instances, error) {
 	filters := []*ec2.Filter{}
 	for n, v := range e.WorkingFilters {
 		filters = append(filters, &ec2.Filter{Name: aws.String(n), Values: aws.StringSlice(v)})
@@ -45,7 +37,7 @@ func (e *EC2) GetInstances() ([]*Instance, error) {
 		return nil, err
 	}
 
-	instances := []*Instance{}
+	instances := Instances{}
 	for _, r := range output.Reservations {
 		for _, i := range r.Instances {
 			capStr, err := findTag(i.Tags, e.CapacityTagKey)

@@ -25,11 +25,15 @@ func NewScaler(c *Config) (*Scaler, error) {
 	logger := logrus.New()
 	logger.Level = lv
 
+	e := ec2.New()
+	e.CapacityTagKey = c.CapacityTagKey
+	e.WorkingFilters = c.WorkingFilters
+
 	return &Scaler{
 		logger: logger,
 		config: c,
 		api:    httpapi.NewHandler(),
-		ec2:    ec2.New(),
+		ec2:    e,
 	}, nil
 }
 
@@ -74,6 +78,13 @@ func (s *Scaler) Run() error {
 	}
 	s.logger.Debugf("Metric value: %f", metric)
 	s.api.UpdateMetric("metric", metric)
+
+	s.logger.Debug("Getting working instances")
+	instances, err := s.ec2.GetInstances()
+	if err != nil {
+		return err
+	}
+	s.api.UpdateMetric("total_capacity", instances.TotalCapacity())
 
 	return nil
 }
