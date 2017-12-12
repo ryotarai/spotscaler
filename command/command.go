@@ -9,8 +9,8 @@ import (
 )
 
 type Command struct {
-	Path string
-	Args []string
+	Path string   `yaml:"Path" validate:"required"`
+	Args []string `yaml:"Args"`
 }
 
 func (c *Command) GetFloat() (float64, error) {

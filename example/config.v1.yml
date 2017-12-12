@@ -1,1 +1,4 @@
 LogLevel: debug
+MetricCommand:
+  Path: "/bin/echo"
+  Args: ["50"]

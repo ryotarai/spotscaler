@@ -3,11 +3,14 @@ package scaler
 import (
 	"io/ioutil"
 
+	"github.com/ryotarai/spotscaler/command"
+	validator "gopkg.in/go-playground/validator.v9"
 	yaml "gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	LogLevel string `yaml:"LogLevel"`
+	LogLevel      string           `yaml:"LogLevel"`
+	MetricCommand *command.Command `yaml:"MetricCommand" validate:"required"`
 }
 
 func NewConfig() *Config {
@@ -30,5 +33,19 @@ func NewConfigFromFile(path string) (*Config, error) {
 		return nil, err
 	}
 
+	err = c.Validate()
+	if err != nil {
+		return nil, err
+	}
+
 	return c, nil
+}
+
+func (c *Config) Validate() error {
+	validate := validator.New()
+	err := validate.Struct(c)
+	if err != nil {
+		return err
+	}
+	return nil
 }
