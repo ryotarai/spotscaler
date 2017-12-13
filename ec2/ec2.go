@@ -1,20 +1,43 @@
 package ec2
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/sirupsen/logrus"
 )
 
 type EC2 struct {
 	sdk ec2iface.EC2API
 
-	WorkingFilters map[string][]string
-	CapacityTagKey string
+	Logger                 *logrus.Logger
+	DryRun                 bool
+	WorkingFilters         map[string][]string
+	CapacityTagKey         string
+	SubnetByAZ             map[string]string
+	KeyName                string
+	SecurityGroupIDs       []string
+	UserData               string
+	IAMInstanceProfileName string
+	TerminatingTag         map[string]string
+	BlockDeviceMappings    []*BlockDeviceMapping
+}
+
+type BlockDeviceMappingEBS struct {
+	DeleteOnTermination bool
+	VolumeSize          int64
+	VolumeType          string
+}
+
+type BlockDeviceMapping struct {
+	DeviceName string
+	EBS        *BlockDeviceMappingEBS
 }
 
 func New() *EC2 {
@@ -26,7 +49,9 @@ func New() *EC2 {
 }
 
 func (e *EC2) GetInstances() (Instances, error) {
-	filters := []*ec2.Filter{}
+	filters := []*ec2.Filter{
+		{Name: aws.String("instance-state-name"), Values: aws.StringSlice([]string{"running"})},
+	}
 	for n, v := range e.WorkingFilters {
 		filters = append(filters, &ec2.Filter{Name: aws.String(n), Values: aws.StringSlice(v)})
 	}
@@ -68,6 +93,127 @@ func (e *EC2) GetInstances() (Instances, error) {
 	}
 
 	return instances, nil
+}
+
+func (e *EC2) LaunchInstances(to Instances, ami string) error {
+	count := map[string]int64{}
+	for _, i := range to {
+		if i.InstanceID != "" {
+			break
+		}
+
+		count[fmt.Sprintf("%s/%s/%f", i.AvailabilityZone, i.InstanceType, i.Capacity)]++
+	}
+
+	userData := base64.StdEncoding.EncodeToString([]byte(e.UserData))
+
+	for k, n := range count {
+		a := strings.Split(k, "/")
+		az := a[0]
+		t := a[1]
+		capacity := a[2]
+
+		tags := []*ec2.TagSpecification{
+			{
+				ResourceType: aws.String("instance"),
+				Tags: []*ec2.Tag{
+					{Key: aws.String(e.CapacityTagKey), Value: aws.String(capacity)},
+				},
+			},
+		}
+
+		in := &ec2.RunInstancesInput{
+			SubnetId:          aws.String(e.SubnetByAZ[az]),
+			InstanceType:      aws.String(t),
+			MinCount:          aws.Int64(n),
+			MaxCount:          aws.Int64(n),
+			ImageId:           aws.String(ami),
+			KeyName:           aws.String(e.KeyName),
+			SecurityGroupIds:  aws.StringSlice(e.SecurityGroupIDs),
+			UserData:          aws.String(userData),
+			TagSpecifications: tags,
+			InstanceMarketOptions: &ec2.InstanceMarketOptionsRequest{
+				MarketType: aws.String("spot"),
+			},
+		}
+		if e.IAMInstanceProfileName != "" {
+			in.IamInstanceProfile = &ec2.IamInstanceProfileSpecification{
+				Name: aws.String(e.IAMInstanceProfileName),
+			}
+		}
+		if len(e.BlockDeviceMappings) > 0 {
+			bdms := []*ec2.BlockDeviceMapping{}
+			for _, b := range e.BlockDeviceMappings {
+				bdm := &ec2.BlockDeviceMapping{
+					DeviceName: aws.String(b.DeviceName),
+					Ebs: &ec2.EbsBlockDevice{
+						DeleteOnTermination: aws.Bool(b.EBS.DeleteOnTermination),
+						VolumeSize:          aws.Int64(b.EBS.VolumeSize),
+						VolumeType:          aws.String(b.EBS.VolumeType),
+					},
+				}
+				bdms = append(bdms, bdm)
+			}
+			in.BlockDeviceMappings = bdms
+		}
+
+		e.Logger.Debugf("Launching instances: %#v", in)
+		if e.DryRun {
+			e.Logger.Debugf("(dry run) RunInstances is skipped")
+			break
+		}
+
+		out, err := e.sdk.RunInstances(in)
+		if err != nil {
+			return err
+		}
+
+		for _, i := range out.Instances {
+			e.Logger.Infof("Launched %s", *i.InstanceId)
+		}
+	}
+
+	return nil
+}
+
+func (e *EC2) TerminateInstances(from, to Instances) error {
+	toMap := map[string]*Instance{}
+
+	for _, i := range to {
+		if i.InstanceID != "" {
+			toMap[i.InstanceID] = i
+		}
+	}
+
+	ids := []string{}
+	for _, i := range from {
+		if _, ok := toMap[i.InstanceID]; ok {
+			continue
+		}
+		ids = append(ids, i.InstanceID)
+	}
+
+	tags := []*ec2.Tag{}
+	for k, v := range e.TerminatingTag {
+		tags = append(tags, &ec2.Tag{
+			Key:   aws.String(k),
+			Value: aws.String(v),
+		})
+	}
+
+	in := &ec2.CreateTagsInput{
+		Resources: aws.StringSlice(ids),
+		Tags:      tags,
+	}
+
+	e.Logger.Debugf("Terminating instances: %#v", in)
+	if e.DryRun {
+		e.Logger.Debugf("(dry run) CreateTags is skipped")
+	} else {
+		e.sdk.CreateTags(in)
+	}
+
+	return nil
 }
 
 func findTag(tags []*ec2.Tag, key string) (string, error) {

@@ -3,8 +3,9 @@
 
 [[projects]]
   name = "github.com/aws/aws-sdk-go"
-  packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/request","aws/session","aws/signer/v4","private/endpoints","private/protocol","private/protocol/ec2query","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","private/waiter","service/ec2","service/ec2/ec2iface","service/sts"]
-  revision = "d8c88d08bd2ea15fa84ac414fe6c75b13b4c2023"
+  packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/ec2query","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","service/ec2","service/ec2/ec2iface","service/sts"]
+  revision = "25ef42b41b82230caae56ab23d872c81fb5c0eae"
+  version = "v1.12.46"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -20,8 +21,8 @@
 [[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
-  revision = "193d1ecb466bf97aae8b454a5cfc192941c64809"
-  version = "v1.9.0"
+  revision = "32e4c1e6bc4e7d0d8451aa6b75200d19e37a536a"
+  version = "v1.32.0"
 
 [[projects]]
   name = "github.com/go-playground/locales"
@@ -33,6 +34,12 @@
   packages = ["."]
   revision = "fc73d0c4bd37070e0d34e3647253565ff7847264"
   version = "v0.14.0"
+
+[[projects]]
+  name = "github.com/golang/mock"
+  packages = ["gomock"]
+  revision = "13f360950a79f5864a972c786a10a50e44b69541"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/golang/protobuf"
@@ -48,7 +55,7 @@
 [[projects]]
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
-  revision = "0b12d6b521d83fc7f755e7cfc1b1fbdd35a01a74"
+  revision = "0b12d6b5"
 
 [[projects]]
   branch = "master"
@@ -130,6 +137,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c7cb0a9793a452587ef7e68b851457448419cd91f312a7a001e803e19fa9d256"
+  inputs-digest = "2c59c8463f9f3857c55e89d5fc812134ec3a910e48235467bec283a804f79387"
   solver-name = "gps-cdcl"
   solver-version = 1
