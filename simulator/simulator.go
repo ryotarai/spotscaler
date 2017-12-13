@@ -6,9 +6,12 @@ import (
 	"strings"
 
 	"github.com/ryotarai/spotscaler/ec2"
+	"github.com/sirupsen/logrus"
 )
 
 type Simulator struct {
+	Logger *logrus.Logger
+
 	PossibleTermination int64
 	TargetMetric        float64
 	InstanceTypes       []string
@@ -60,7 +63,19 @@ func (s *Simulator) WorstCase(instances ec2.Instances) ec2.Instances {
 	return is
 }
 
-func (s *Simulator) DesiredInstances(instances ec2.Instances, metric float64) ec2.Instances {
+func (s *Simulator) DesiredInstancesFromCapacity(instances ec2.Instances, capacity float64) ec2.Instances {
+	return s.desiredInstances(instances, func(is ec2.Instances) bool {
+		return is.TotalCapacity() >= capacity
+	})
+}
+
+func (s *Simulator) DesiredInstancesFromMetric(instances ec2.Instances, metric float64) ec2.Instances {
+	return s.desiredInstances(instances, func(is ec2.Instances) bool {
+		return metric*instances.TotalCapacity()/s.WorstCase(is).TotalCapacity() <= s.TargetMetric
+	})
+}
+
+func (s *Simulator) desiredInstances(instances ec2.Instances, satisfy func(is ec2.Instances) bool) ec2.Instances {
 	is := ec2.Instances{}
 	spotInstances := ec2.Instances{}
 	for _, i := range instances {
@@ -77,7 +92,7 @@ func (s *Simulator) DesiredInstances(instances ec2.Instances, metric float64) ec
 	}
 
 	for {
-		if metric*instances.TotalCapacity()/s.WorstCase(is).TotalCapacity() <= s.TargetMetric {
+		if satisfy(is) {
 			return is
 		}
 		if len(spotInstances) == 0 {
@@ -101,11 +116,12 @@ func (s *Simulator) DesiredInstances(instances ec2.Instances, metric float64) ec
 		i := spotInstances[instanceIdx]
 		cap[fmt.Sprintf("%s/%s", i.AvailabilityZone, i.InstanceType)] += i.Capacity
 		is = append(is, i)
+		s.Logger.Debugf("KEEP %#v", i)
 		spotInstances = append(spotInstances[:instanceIdx], spotInstances[instanceIdx+1:]...)
 	}
 
 	for {
-		if metric*instances.TotalCapacity()/s.WorstCase(is).TotalCapacity() <= s.TargetMetric {
+		if satisfy(is) {
 			return is
 		}
 
@@ -127,12 +143,14 @@ func (s *Simulator) DesiredInstances(instances ec2.Instances, metric float64) ec
 			}
 		}
 
-		is = append(is, &ec2.Instance{
+		i := &ec2.Instance{
 			InstanceType:     nextType,
 			AvailabilityZone: nextAZ,
 			Capacity:         s.CapacityByType[nextType],
 			Market:           "spot",
-		})
+		}
+		is = append(is, i)
+		s.Logger.Debugf("LAUNCH %#v", i)
 		cap[fmt.Sprintf("%s/%s", nextAZ, nextType)] += s.CapacityByType[nextType]
 	}
 }

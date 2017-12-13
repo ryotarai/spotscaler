@@ -1,4 +1,5 @@
 LogLevel: debug
+DryRun: true
 MetricCommand:
   Path: "/bin/echo"
   Args: ["50"]
@@ -6,3 +7,16 @@ APIAddr: 127.0.0.1:9000
 CapacityTagKey: Capacity
 WorkingFilters:
   "tag:Role": ["spotscaler-example"]
+PossibleTermination: 1
+InstanceTypes:
+  - c4.large
+  - m4.large
+AvailabilityZones:
+  - ap-northeast-1b
+  - ap-northeast-1c
+CapacityByType:
+  c4.large: 8
+  m4.large: 6.5
+ScalingOutThreshold: 75.0
+ScalingInThreshold: 25.0
+MinimumCapacity: 1.0

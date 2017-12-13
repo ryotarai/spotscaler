@@ -71,3 +71,73 @@ func TestGetInstances(t *testing.T) {
 		})
 	}
 }
+
+func TestLaunchInstances(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	sdk := mock.NewMockEC2API(ctrl)
+	e := &EC2{
+		sdk:            sdk,
+		CapacityTagKey: "Capacity",
+		SubnetByAZ: map[string]string{
+			"az-1": "subnet-1",
+		},
+		KeyName:                "key",
+		SecurityGroupIDs:       []string{"sg-1"},
+		UserData:               "userdata",
+		IAMInstanceProfileName: "profile",
+		BlockDeviceMappings: []*BlockDeviceMapping{
+			{
+				DeviceName: "/dev/sda1",
+				EBS: &BlockDeviceMappingEBS{
+					DeleteOnTermination: true,
+					VolumeSize:          10,
+					VolumeType:          "gp2",
+				},
+			},
+		},
+	}
+
+	in := &ec2.RunInstancesInput{
+		BlockDeviceMappings: []*ec2.BlockDeviceMapping{
+			{
+				DeviceName: aws.String("/dev/sda1"),
+				Ebs: &ec2.EbsBlockDevice{
+					DeleteOnTermination: aws.Bool(true),
+					VolumeSize:          aws.Int64(10),
+					VolumeType:          aws.String("gp2"),
+				},
+			},
+		},
+		//   IamInstanceProfile: {
+		//     Name: "profile"
+		//   },
+		//   ImageId: "dummy",
+		//   InstanceMarketOptions: {
+		//     MarketType: "spot"
+		//   },
+		//   InstanceType: "",
+		//   KeyName: "key",
+		//   MaxCount: 1,
+		//   MinCount: 1,
+		//   SecurityGroupIds: ["sg-1"],
+		//   SubnetId: "",
+		//   TagSpecifications: [{
+		//       ResourceType: "instance",
+		//       Tags: [{
+		//           Key: "Capacity",
+		//           Value: "0.000000"
+		//         }]
+		//     }],
+		//   UserData: "dXNlcmRhdGE="
+		// }])
+	}
+	sdk.EXPECT().RunInstances(in).Return(&ec2.Reservation{})
+
+	e.LaunchInstances(Instances{
+		{
+			InstanceID: "",
+		},
+	}, "dummy")
+}

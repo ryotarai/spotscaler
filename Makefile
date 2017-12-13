@@ -8,9 +8,7 @@ install:
 	go install -ldflags "-X github.com/ryotarai/spotscaler/lib.GitCommit=$(COMMIT)"
 
 test:
-	go test -v github.com/ryotarai/spotscaler/lib
+	go test -v ./...
 
 genmock:
-	rm lib/mock_*.go
-	./scripts/genmock.sh EC2ClientIface
-	./scripts/genmock.sh StatusStoreIface
+	mockgen -destination mock/ec2iface.go -package mock github.com/aws/aws-sdk-go/service/ec2/ec2iface EC2API

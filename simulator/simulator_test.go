@@ -39,7 +39,7 @@ func TestWorstCase(t *testing.T) {
 	assert.Equal(t, all[9], is[5])
 }
 
-func TestDesiredInstances(t *testing.T) {
+func TestDesiredInstancesFromMetric(t *testing.T) {
 	s := &Simulator{
 		TargetMetric:      75,
 		AvailabilityZones: []string{"az-1", "az-2"},
@@ -50,7 +50,7 @@ func TestDesiredInstances(t *testing.T) {
 	all := ec2.Instances{
 		{AvailabilityZone: "az-1", InstanceType: "a", Capacity: 10.0, Market: "spot"},
 	}
-	desired := s.DesiredInstances(all, 50.0)
+	desired := s.DesiredInstancesFromMetric(all, 50.0)
 	assert.Len(t, desired, 1)
 
 	all = ec2.Instances{
@@ -58,7 +58,7 @@ func TestDesiredInstances(t *testing.T) {
 		{AvailabilityZone: "az-1", InstanceType: "a", Capacity: 10.0, Market: "spot"},
 		{AvailabilityZone: "az-2", InstanceType: "a", Capacity: 10.0, Market: "spot"},
 	}
-	desired = s.DesiredInstances(all, 50.0)
+	desired = s.DesiredInstancesFromMetric(all, 50.0)
 	assert.Len(t, desired, 2)
 	assert.Equal(t, all[0], desired[0])
 	assert.Equal(t, all[2], desired[1])
@@ -67,7 +67,7 @@ func TestDesiredInstances(t *testing.T) {
 		{AvailabilityZone: "az-1", InstanceType: "a", Capacity: 10.0, Market: "spot"},
 		{AvailabilityZone: "az-1", InstanceType: "a", Capacity: 10.0, Market: "spot"},
 	}
-	desired = s.DesiredInstances(all, 175.0)
+	desired = s.DesiredInstancesFromMetric(all, 175.0)
 	assert.Len(t, desired, 5)
 	assert.Equal(t, all[0], desired[0])
 	assert.Equal(t, all[1], desired[1])
@@ -89,4 +89,31 @@ func TestDesiredInstances(t *testing.T) {
 		Capacity:         10.0,
 		Market:           "spot",
 	}, desired[4])
+}
+
+func TestDesiredInstancesFromCapacity(t *testing.T) {
+	s := &Simulator{
+		AvailabilityZones: []string{"az-1", "az-2"},
+		InstanceTypes:     []string{"a"},
+		CapacityByType:    map[string]float64{"a": 10},
+	}
+
+	all := ec2.Instances{
+		{AvailabilityZone: "az-1", InstanceType: "a", Capacity: 10.0, Market: "spot"},
+	}
+	desired := s.DesiredInstancesFromCapacity(all, 30.0)
+	assert.Len(t, desired, 3)
+	assert.Equal(t, all[0], desired[0])
+	assert.Equal(t, &ec2.Instance{
+		InstanceType:     "a",
+		AvailabilityZone: "az-2",
+		Capacity:         10.0,
+		Market:           "spot",
+	}, desired[1])
+	assert.Equal(t, &ec2.Instance{
+		InstanceType:     "a",
+		AvailabilityZone: "az-1",
+		Capacity:         10.0,
+		Market:           "spot",
+	}, desired[2])
 }
