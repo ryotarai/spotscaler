@@ -12,6 +12,7 @@ import (
 type Config struct {
 	LogLevel               string                    `yaml:"LogLevel"`
 	DryRun                 bool                      `yaml:"DryRun"`
+	AMICommand             *command.Command          `yaml:"AMICommand" validate:"required"`
 	MetricCommand          *command.Command          `yaml:"MetricCommand" validate:"required"`
 	APIAddr                string                    `yaml:"APIAddr"`
 	CapacityTagKey         string                    `yaml:"CapacityTagKey" validate:"required"`

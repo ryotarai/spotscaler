@@ -150,11 +150,22 @@ func (s *Scaler) Run() error {
 
 	if desiredInstances != nil {
 		if desiredInstances.TotalCapacity() < instances.TotalCapacity() {
-			s.logger.Info("Trying to scaling in")
+			s.logger.Info("Start to scale in")
 			s.ec2.TerminateInstances(instances, desiredInstances)
 		} else if desiredInstances.TotalCapacity() > instances.TotalCapacity() {
-			s.logger.Info("Trying to scaling out")
-			s.ec2.LaunchInstances(desiredInstances, "dummy")
+			s.logger.Info("Start to scale out")
+
+			s.logger.Debug("Retrieving AMI")
+			ami, err := s.config.AMICommand.GetString()
+			if err != nil {
+				return err
+			}
+			if ami == "" {
+				s.logger.Warn("AMI is not found")
+				return nil
+			}
+
+			s.ec2.LaunchInstances(desiredInstances, ami)
 		}
 	}
 

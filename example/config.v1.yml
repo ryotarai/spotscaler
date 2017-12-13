@@ -1,5 +1,8 @@
 LogLevel: debug
 DryRun: true
+AMICommand:
+  Path: "/bin/echo"
+  Args: ["ami-42ca4724"]
 MetricCommand:
   Path: "/bin/echo"
   Args: ["50"]

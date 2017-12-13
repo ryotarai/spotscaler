@@ -32,6 +32,18 @@ func (c *Command) GetFloat() (float64, error) {
 	return f, nil
 }
 
+func (c *Command) GetString() (string, error) {
+	cmd := exec.Command(c.Path, c.Args...)
+
+	b, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	s := string(b)
+	return strings.TrimRight(s, "\n"), nil
+}
+
 func GetExitStatusFromError(err error) int {
 	if e, ok := err.(*exec.ExitError); ok {
 		if s, ok := e.Sys().(syscall.WaitStatus); ok {
