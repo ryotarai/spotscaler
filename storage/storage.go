@@ -13,6 +13,7 @@ type Storage interface {
 	AddSchedule(sch *Schedule) error
 	ListSchedules() ([]*Schedule, error)
 	RemoveSchedule(id string) error
+	ActiveSchedule() (*Schedule, error)
 }
 
 type RedisStorage struct {
@@ -72,6 +73,23 @@ func (s *RedisStorage) ListSchedules() ([]*Schedule, error) {
 	}
 
 	return schedules, nil
+}
+
+func (s *RedisStorage) ActiveSchedule() (*Schedule, error) {
+	schs, err := s.ListSchedules()
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	var active *Schedule
+	for _, sch := range schs {
+		if now.After(sch.StartAt) && now.Before(sch.EndAt) && (active == nil || sch.StartAt.After(active.StartAt)) {
+			active = sch
+		}
+	}
+
+	return active, nil
 }
 
 func (s *RedisStorage) key(k string) string {

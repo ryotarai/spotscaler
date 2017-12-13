@@ -130,7 +130,20 @@ func (s *Scaler) Run() error {
 
 	if instances.TotalCapacity() > 0 && (worstMetric < s.config.ScalingInThreshold || s.config.ScalingOutThreshold < worstMetric) {
 		d := s.simulator.DesiredInstancesFromMetric(instances, worstMetric)
-		if d.TotalCapacity() > desiredInstances.TotalCapacity() {
+		if desiredInstances == nil || d.TotalCapacity() > desiredInstances.TotalCapacity() {
+			desiredInstances = d
+		}
+	}
+
+	schedule, err := s.storage.ActiveSchedule()
+	if err != nil {
+		return err
+	}
+
+	if schedule != nil {
+		s.logger.Infof("An active schedule is found: %#v", schedule)
+		d := s.simulator.DesiredInstancesFromCapacity(instances, schedule.Capacity)
+		if instances.TotalCapacity() < d.TotalCapacity() && (desiredInstances == nil || d.TotalCapacity() > desiredInstances.TotalCapacity()) {
 			desiredInstances = d
 		}
 	}
