@@ -7,6 +7,7 @@ import (
 	"github.com/ryotarai/spotscaler/ec2"
 	"github.com/ryotarai/spotscaler/httpapi"
 	"github.com/ryotarai/spotscaler/simulator"
+	"github.com/ryotarai/spotscaler/storage"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,6 +17,7 @@ type Scaler struct {
 	api       *httpapi.Handler
 	ec2       *ec2.EC2
 	simulator *simulator.Simulator
+	storage   storage.Storage
 }
 
 func NewScaler(c *Config) (*Scaler, error) {
@@ -39,11 +41,17 @@ func NewScaler(c *Config) (*Scaler, error) {
 	e.BlockDeviceMappings = c.BlockDeviceMappings
 	e.DryRun = c.DryRun
 
+	storage, err := storage.NewRedisStorage(c.RedisURL, c.RedisKeyPrefix)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Scaler{
-		logger: logger,
-		config: c,
-		api:    httpapi.NewHandler(),
-		ec2:    e,
+		logger:  logger,
+		config:  c,
+		api:     httpapi.NewHandler(storage),
+		ec2:     e,
+		storage: storage,
 		simulator: &simulator.Simulator{
 			Logger:              logger,
 			PossibleTermination: c.PossibleTermination,

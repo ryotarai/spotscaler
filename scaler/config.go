@@ -29,6 +29,8 @@ type Config struct {
 	UserData               string                    `yaml:"UserData"`
 	IAMInstanceProfileName string                    `yaml:"IAMInstanceProfileName"`
 	BlockDeviceMappings    []*ec2.BlockDeviceMapping `yaml:"BlockDeviceMappings"`
+	RedisURL               string                    `yaml:"RedisURL" validate:"required"`
+	RedisKeyPrefix         string                    `yaml:"RedisKeyPrefix"`
 }
 
 func NewConfig() *Config {

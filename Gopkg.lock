@@ -14,6 +14,12 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/garyburd/redigo"
+  packages = ["internal","redis"]
+  revision = "47dc60e71eed504e3ef8e77ee3c6fe720f3be57f"
+  version = "v1.3.0"
+
+[[projects]]
   name = "github.com/gin-gonic/gin"
   packages = [".","binding","render"]
   revision = "f931d1ea80ae95a6fc739213cdd9399bd2967fb6"
@@ -47,6 +53,12 @@
   revision = "df1d3ca07d2d07bba352d5b73c4313b4e2a6203e"
 
 [[projects]]
+  name = "github.com/google/uuid"
+  packages = ["."]
+  revision = "064e2069ce9c359c118179501254f67d7d37ba24"
+  version = "0.2"
+
+[[projects]]
   branch = "master"
   name = "github.com/hashicorp/logutils"
   packages = ["."]
@@ -71,7 +83,7 @@
 
 [[projects]]
   name = "github.com/sirupsen/logrus"
-  packages = ["."]
+  packages = [".","hooks/test"]
   revision = "d682213848ed68c0a260ca37d6dd5ace8423f5ba"
   version = "v1.0.4"
 
@@ -137,6 +149,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2c59c8463f9f3857c55e89d5fc812134ec3a910e48235467bec283a804f79387"
+  inputs-digest = "816f055454e82a6288e13eb875daea64c57f6ab14813afd0d5991947b63618f8"
   solver-name = "gps-cdcl"
   solver-version = 1

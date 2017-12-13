@@ -26,3 +26,5 @@ SubnetByAZ:
   ap-northeast-1c: subnet-b
 SecurityGroupIDs:
   - sg-
+RedisURL: redis://127.0.0.1:6379
+RedisKeyPrefix: spotscaler/
