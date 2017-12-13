@@ -10,6 +10,10 @@ import (
 
 type Simulator struct {
 	PossibleTermination int64
+	TargetMetric        float64
+	InstanceTypes       []string
+	AvailabilityZones   []string
+	CapacityByType      map[string]float64
 }
 
 func (s *Simulator) WorstCase(instances ec2.Instances) ec2.Instances {
@@ -54,4 +58,81 @@ func (s *Simulator) WorstCase(instances ec2.Instances) ec2.Instances {
 	}
 
 	return is
+}
+
+func (s *Simulator) DesiredInstances(instances ec2.Instances, metric float64) ec2.Instances {
+	is := ec2.Instances{}
+	spotInstances := ec2.Instances{}
+	for _, i := range instances {
+		if i.Market == "ondemand" {
+			is = append(is, i)
+		} else {
+			spotInstances = append(spotInstances, i)
+		}
+	}
+
+	cap := map[string]float64{}
+	for _, i := range spotInstances {
+		cap[fmt.Sprintf("%s/%s", i.AvailabilityZone, i.InstanceType)] = 0
+	}
+
+	for {
+		if metric*instances.TotalCapacity()/s.WorstCase(is).TotalCapacity() <= s.TargetMetric {
+			return is
+		}
+		if len(spotInstances) == 0 {
+			break
+		}
+
+		var minCap float64 = -1
+		var instanceIdx int
+		for idx, i := range spotInstances {
+			c := cap[fmt.Sprintf("%s/%s", i.AvailabilityZone, i.InstanceType)]
+			if minCap < 0 || c < minCap {
+				minCap = c
+				instanceIdx = idx
+			} else if c == minCap {
+				if i.Capacity < spotInstances[instanceIdx].Capacity {
+					instanceIdx = idx
+				}
+			}
+		}
+
+		i := spotInstances[instanceIdx]
+		cap[fmt.Sprintf("%s/%s", i.AvailabilityZone, i.InstanceType)] += i.Capacity
+		is = append(is, i)
+		spotInstances = append(spotInstances[:instanceIdx], spotInstances[instanceIdx+1:]...)
+	}
+
+	for {
+		if metric*instances.TotalCapacity()/s.WorstCase(is).TotalCapacity() <= s.TargetMetric {
+			return is
+		}
+
+		var minCap float64 = -1
+		var nextAZ, nextType string
+		for _, az := range s.AvailabilityZones {
+			for _, t := range s.InstanceTypes {
+				c := cap[fmt.Sprintf("%s/%s", az, t)]
+				if minCap < 0 || c < minCap {
+					minCap = c
+					nextAZ = az
+					nextType = t
+				} else if c == minCap {
+					if s.CapacityByType[t] < s.CapacityByType[nextType] {
+						nextAZ = az
+						nextType = t
+					}
+				}
+			}
+		}
+
+		is = append(is, &ec2.Instance{
+			InstanceType:     nextType,
+			AvailabilityZone: nextAZ,
+			Capacity:         s.CapacityByType[nextType],
+			Market:           "spot",
+		})
+		cap[fmt.Sprintf("%s/%s", nextAZ, nextType)] += s.CapacityByType[nextType]
+	}
 }
