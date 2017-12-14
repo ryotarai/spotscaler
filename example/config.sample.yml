@@ -86,3 +86,5 @@ Timers:
       Args: ["Hello"]
     After: LaunchingInstances
     Duration: 2m
+# optional: HTTP API
+APIAddr: '127.0.0.1:8080'

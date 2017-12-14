@@ -16,7 +16,7 @@ $ spotscaler -config config.yml [-dry-run]
 ### HTTP API
 
 ```
-$ spotscaler -config config.yml -server :8080
+$ spotscaler -config config.yml
 ```
 
 ```
