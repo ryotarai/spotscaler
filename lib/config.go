@@ -36,6 +36,7 @@ type Config struct {
 	ScaleInThreshold       float64             `yaml:"ScaleInThreshold" validate:"required"`
 	ProhibitToScaleIn      bool                `yaml:"ProhibitToScaleIn"`
 	DryRun                 bool                `yaml:"DryRun"`
+	APIAddr                string              `yaml:"APIAddr"`
 }
 
 func (c *Config) FullAutoscalerID() string {

@@ -7,10 +7,10 @@ import (
 )
 
 type APIServer struct {
-	status *StatusStore
+	status StatusStoreIface
 }
 
-func NewAPIServer(status *StatusStore) *APIServer {
+func NewAPIServer(status StatusStoreIface) *APIServer {
 	return &APIServer{
 		status: status,
 	}
@@ -22,7 +22,9 @@ func (s *APIServer) Run(addr string) {
 	r.GET("/schedules", s.getSchedulesHandler)
 	r.POST("/schedules", s.postSchedulesHandler)
 	r.DELETE("/schedules", s.deleteSchedulesHandler)
-	r.Run(addr)
+	go func() {
+		r.Run(addr)
+	}()
 }
 
 func (s *APIServer) getStatusHandler(c *gin.Context) {
