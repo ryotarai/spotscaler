@@ -26,12 +26,6 @@ loop Run()
     Scaler <-- Storage: Timers
     Scaler -> TimerCommand: Run()
 
-    == Get a metric value from an external command ==
-
-    Scaler -> MetricCommand: GetFloat()
-    Scaler <-- MetricCommand: Metric like CPU util
-    Scaler -> API: UpdateMetric(metric)
-
     == Getting current instance state ==
 
     Scaler -> EC2: GetInstanceState()
@@ -46,6 +40,12 @@ loop Run()
     end note
 
     Scaler -> API: UpdateCapacity(state.Capacity)
+
+    == Get a metric value from an external command ==
+
+    Scaler -> MetricCommand: GetFloat()
+    Scaler <-- MetricCommand: Metric like CPU util
+    Scaler -> API: UpdateMetric(metric)
 
     == Simulate the worst state from the current state ==
 
