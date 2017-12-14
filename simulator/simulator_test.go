@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/ryotarai/spotscaler/ec2"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,7 +41,10 @@ func TestWorstCase(t *testing.T) {
 }
 
 func TestDesiredInstancesFromMetric(t *testing.T) {
+	logger, _ := logrustest.NewNullLogger()
+
 	s := &Simulator{
+		Logger:            logger,
 		TargetMetric:      75,
 		AvailabilityZones: []string{"az-1", "az-2"},
 		InstanceTypes:     []string{"a"},
@@ -92,7 +96,10 @@ func TestDesiredInstancesFromMetric(t *testing.T) {
 }
 
 func TestDesiredInstancesFromCapacity(t *testing.T) {
+	logger, _ := logrustest.NewNullLogger()
+
 	s := &Simulator{
+		Logger:            logger,
 		AvailabilityZones: []string{"az-1", "az-2"},
 		InstanceTypes:     []string{"a"},
 		CapacityByType:    map[string]float64{"a": 10},
