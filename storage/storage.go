@@ -3,10 +3,12 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
 	"github.com/google/uuid"
+	"github.com/ryotarai/spotscaler/timer"
 )
 
 type Storage interface {
@@ -14,6 +16,9 @@ type Storage interface {
 	ListSchedules() ([]*Schedule, error)
 	RemoveSchedule(id string) error
 	ActiveSchedule() (*Schedule, error)
+	RegisterTimer(t *timer.Timer) error
+	DeregisterTimer(t *timer.Timer) error
+	GetExpiredTimerNames() ([]string, error)
 }
 
 type RedisStorage struct {
@@ -90,6 +95,44 @@ func (s *RedisStorage) ActiveSchedule() (*Schedule, error) {
 	}
 
 	return active, nil
+}
+
+func (s *RedisStorage) RegisterTimer(t *timer.Timer) error {
+	tm := time.Now().Add(t.Duration)
+	_, err := s.redis.Do("HSet", s.key("timers"), t.Name, tm.Unix())
+	return err
+}
+
+func (s *RedisStorage) DeregisterTimer(t *timer.Timer) error {
+	_, err := s.redis.Do("HDel", s.key("timers"), t.Name)
+	return err
+}
+
+func (s *RedisStorage) GetExpiredTimerNames() ([]string, error) {
+	reply, err := redis.StringMap(s.redis.Do("HGetAll", s.key("timers")))
+	if err != nil {
+		return nil, err
+	}
+
+	names := []string{}
+	now := time.Now()
+	for name, unix := range reply {
+		i, err := strconv.ParseInt(unix, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		t := time.Unix(i, 0)
+		if err != nil {
+			return nil, err
+		}
+
+		if t.After(now) {
+			names = append(names, name)
+		}
+	}
+
+	return names, nil
 }
 
 func (s *RedisStorage) key(k string) string {

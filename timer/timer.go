@@ -7,7 +7,8 @@ import (
 )
 
 type Timer struct {
-	Duration time.Duration
-	After    string
-	Command  *command.Command
+	Name     string           `yaml:"Name" validate:"required"`
+	Duration time.Duration    `yaml:"Duration" validate:"required"`
+	After    string           `yaml:"After" validate:"required"`
+	Command  *command.Command `yaml:"Command" validate:"required"`
 }

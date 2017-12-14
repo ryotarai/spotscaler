@@ -10,6 +10,7 @@ import (
 	"github.com/ryotarai/spotscaler/httpapi"
 	"github.com/ryotarai/spotscaler/simulator"
 	"github.com/ryotarai/spotscaler/storage"
+	"github.com/ryotarai/spotscaler/timer"
 	"github.com/sirupsen/logrus"
 )
 
@@ -102,6 +103,8 @@ func (s *Scaler) StartAPIServer() {
 }
 
 func (s *Scaler) Run() error {
+	s.runTimers()
+
 	metric, err := s.config.MetricCommand.GetFloat()
 	if err != nil {
 		return err
@@ -174,6 +177,8 @@ func (s *Scaler) Run() error {
 
 			s.ec2.LaunchInstances(desiredInstances, ami)
 		}
+
+		s.setTimers("LaunchingInstances")
 	}
 
 	return nil
@@ -201,4 +206,50 @@ func (s *Scaler) fireScalingEvent(from ec2.Instances, to ec2.Instances) error {
 	}
 	_, err = s.config.EventCommand.GetString(fmt.Sprintf("%s\n", string(b)))
 	return err
+}
+
+func (s *Scaler) setTimers(after string) error {
+	for _, t := range s.config.Timers {
+		if t.After == after {
+			err := s.storage.RegisterTimer(t)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *Scaler) runTimers() error {
+	names, err := s.storage.GetExpiredTimerNames()
+	if err != nil {
+		return err
+	}
+
+	for _, n := range names {
+		var timer *timer.Timer
+		for _, t := range s.config.Timers {
+			if t.Name == n {
+				timer = t
+			}
+		}
+
+		if timer == nil {
+			s.logger.Warnf("Timer '%s' is not found", n)
+			continue
+		}
+
+		s.logger.Infof("Running a timer: %#v", timer)
+		_, err := timer.Command.GetString("")
+		if err != nil {
+			return err
+		}
+
+		err = s.storage.DeregisterTimer(timer)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
