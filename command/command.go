@@ -32,8 +32,9 @@ func (c *Command) GetFloat() (float64, error) {
 	return f, nil
 }
 
-func (c *Command) GetString() (string, error) {
+func (c *Command) GetString(stdin string) (string, error) {
 	cmd := exec.Command(c.Path, c.Args...)
+	cmd.Stdin = strings.NewReader(stdin)
 
 	b, err := cmd.Output()
 	if err != nil {

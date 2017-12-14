@@ -6,6 +6,8 @@ AMICommand:
 MetricCommand:
   Path: "/bin/echo"
   Args: ["50"]
+EventCommand:
+  Path: "example/event.sh"
 APIAddr: 127.0.0.1:9000
 CapacityTagKey: Capacity
 WorkingFilters:

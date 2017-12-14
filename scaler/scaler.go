@@ -1,6 +1,8 @@
 package scaler
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -149,6 +151,11 @@ func (s *Scaler) Run() error {
 	}
 
 	if desiredInstances != nil {
+		err := s.fireScalingEvent(instances, desiredInstances)
+		if err != nil {
+			return err
+		}
+
 		if desiredInstances.TotalCapacity() < instances.TotalCapacity() {
 			s.logger.Info("Start to scale in")
 			s.ec2.TerminateInstances(instances, desiredInstances)
@@ -156,7 +163,7 @@ func (s *Scaler) Run() error {
 			s.logger.Info("Start to scale out")
 
 			s.logger.Debug("Retrieving AMI")
-			ami, err := s.config.AMICommand.GetString()
+			ami, err := s.config.AMICommand.GetString("")
 			if err != nil {
 				return err
 			}
@@ -175,4 +182,23 @@ func (s *Scaler) Run() error {
 func (s *Scaler) updateMetric(k string, v float64) {
 	s.logger.Debugf("Updating a metric %s:%f", k, v)
 	s.api.UpdateMetric(k, v)
+}
+
+func (s *Scaler) fireScalingEvent(from ec2.Instances, to ec2.Instances) error {
+	if s.config.EventCommand == nil {
+		return nil
+	}
+
+	type event struct {
+		Event string
+		From  ec2.Instances
+		To    ec2.Instances
+	}
+	e := event{"scaling", from, to}
+	b, err := json.Marshal(e)
+	if err != nil {
+		return err
+	}
+	_, err = s.config.EventCommand.GetString(fmt.Sprintf("%s\n", string(b)))
+	return err
 }

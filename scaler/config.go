@@ -14,6 +14,7 @@ type Config struct {
 	DryRun                 bool                      `yaml:"DryRun"`
 	AMICommand             *command.Command          `yaml:"AMICommand" validate:"required"`
 	MetricCommand          *command.Command          `yaml:"MetricCommand" validate:"required"`
+	EventCommand           *command.Command          `yaml:"EventCommand"`
 	APIAddr                string                    `yaml:"APIAddr"`
 	CapacityTagKey         string                    `yaml:"CapacityTagKey" validate:"required"`
 	WorkingFilters         map[string][]string       `yaml:"WorkingFilters" validate:"required"`
