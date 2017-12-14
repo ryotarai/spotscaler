@@ -8,6 +8,11 @@ MetricCommand:
   Args: ["50"]
 EventCommand:
   Path: "example/event.sh"
+Timers:
+  - Duration: 2m
+    After: LaunchingInstances
+    Command:
+      Path: "example/timer.sh"
 APIAddr: 127.0.0.1:9000
 CapacityTagKey: Capacity
 WorkingFilters:

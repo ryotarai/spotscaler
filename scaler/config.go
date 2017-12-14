@@ -5,6 +5,7 @@ import (
 
 	"github.com/ryotarai/spotscaler/command"
 	"github.com/ryotarai/spotscaler/ec2"
+	"github.com/ryotarai/spotscaler/timer"
 	validator "gopkg.in/go-playground/validator.v9"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -15,6 +16,7 @@ type Config struct {
 	AMICommand             *command.Command          `yaml:"AMICommand" validate:"required"`
 	MetricCommand          *command.Command          `yaml:"MetricCommand" validate:"required"`
 	EventCommand           *command.Command          `yaml:"EventCommand"`
+	Timers                 []*timer.Timer            `yaml:"Timers"`
 	APIAddr                string                    `yaml:"APIAddr"`
 	CapacityTagKey         string                    `yaml:"CapacityTagKey" validate:"required"`
 	WorkingFilters         map[string][]string       `yaml:"WorkingFilters" validate:"required"`
