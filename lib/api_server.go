@@ -1,24 +1,32 @@
 package autoscaler
 
 import (
+	"fmt"
 	"log"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
 type APIServer struct {
-	status StatusStoreIface
+	status  StatusStoreIface
+	metrics map[string]float64
 }
 
 func NewAPIServer(status StatusStoreIface) *APIServer {
 	return &APIServer{
-		status: status,
+		status:  status,
+		metrics: map[string]float64{},
 	}
+}
+
+func (s *APIServer) UpdateMetrics(metrics map[string]float64) {
+	s.metrics = metrics
 }
 
 func (s *APIServer) Run(addr string) {
 	r := gin.Default()
-	r.GET("/status", s.getStatusHandler)
+	r.GET("/metrics", s.getMetricsHandler)
 	r.GET("/schedules", s.getSchedulesHandler)
 	r.POST("/schedules", s.postSchedulesHandler)
 	r.DELETE("/schedules", s.deleteSchedulesHandler)
@@ -27,13 +35,13 @@ func (s *APIServer) Run(addr string) {
 	}()
 }
 
-func (s *APIServer) getStatusHandler(c *gin.Context) {
-	metric, err := s.status.GetMetric()
-	if err != nil {
-		log.Printf("[ERROR] %v", err)
+func (s *APIServer) getMetricsHandler(c *gin.Context) {
+	lines := []string{}
+	for k, v := range s.metrics {
+		lines = append(lines, fmt.Sprintf("spotscaler_%s{} %f", k, v))
 	}
-
-	c.JSON(200, metric)
+	body := fmt.Sprintf("%s\n", strings.Join(lines, "\n"))
+	c.String(200, body)
 }
 
 func (s *APIServer) getSchedulesHandler(c *gin.Context) {

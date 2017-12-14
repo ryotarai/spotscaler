@@ -22,6 +22,7 @@ type Runner struct {
 	status     StatusStoreIface
 	awsSession *session.Session
 	ec2Client  EC2ClientIface
+	api        *APIServer
 }
 
 func NewRunner(config *Config) (*Runner, error) {
@@ -30,17 +31,24 @@ func NewRunner(config *Config) (*Runner, error) {
 		return nil, err
 	}
 
+	status := NewStatusStore(config.RedisHost, config.FullAutoscalerID())
+
 	runner := &Runner{
 		config:     config,
-		status:     NewStatusStore(config.RedisHost, config.FullAutoscalerID()),
+		status:     status,
 		awsSession: awsSess,
 		ec2Client:  NewEC2Client(ec2.New(awsSess), config),
+		api:        NewAPIServer(status),
 	}
 
 	return runner, nil
 }
 
 func (r *Runner) StartLoop() error {
+	if r.config.APIAddr != "" {
+		r.api.Run(r.config.APIAddr)
+	}
+
 	SetCapacityTable(r.config.InstanceCapacityByType)
 
 	loopInterval, err := time.ParseDuration(r.config.LoopInterval)
@@ -217,19 +225,16 @@ func (r *Runner) scale() error {
 
 	log.Printf("[DEBUG] CPU util: %f", cpuUtil)
 
-	err = r.status.StoreMetric(map[string]float64{
-		"lastOndemandCapacity":        ondemandCapacity.Total(),
-		"lastSpotCapacity":            spotCapacity.Total(),
-		"lastAvailableVarieties":      float64(len(availableVarieties)),
-		"lastUnavailableVarieties":    float64(len(price) - len(availableVarieties)),
-		"lastSpotCapacityInWorstCase": worstTotalSpotCapacity,
-		"lastCPUUtilToScaleOut":       cpuUtilToScaleOut,
-		"lastCPUUtilToScaleIn":        cpuUtilToScaleIn,
-		"lastCPUUtil":                 cpuUtil,
+	r.api.UpdateMetrics(map[string]float64{
+		"ondemand_capacity":           ondemandCapacity.Total(),
+		"spot_capacity":               spotCapacity.Total(),
+		"available_varieties":         float64(len(availableVarieties)),
+		"unavailable_varieties":       float64(len(price) - len(availableVarieties)),
+		"spot_capacity_in_worst_case": worstTotalSpotCapacity,
+		"cpu_util_to_scale_out":       cpuUtilToScaleOut,
+		"cpu_util_to_scale_in":        cpuUtilToScaleIn,
+		"cpu_util":                    cpuUtil,
 	})
-	if err != nil {
-		log.Printf("[WARN] storing metric failed")
-	}
 
 	cooldownEndsAt, err := r.status.FetchCooldownEndsAt()
 	if err != nil {

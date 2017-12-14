@@ -61,11 +61,6 @@ func StartCLI() int {
 		return 1
 	}
 
-	if config.APIAddr != "" {
-		api := NewAPIServer(runner.status)
-		api.Run(config.APIAddr)
-	}
-
 	err = runner.StartLoop()
 
 	if err != nil {
