@@ -2,9 +2,6 @@
 
 Autoscaler for Amazon EC2 using spot instances
 
-**This is working in production environment in Cookpad, but still heavily under development and refactoring**
-**Documentation will be prepared in a few month**
-
 ## Usage
 
 First, create config YAML file like https://github.com/ryotarai/spotscaler/blob/master/config.sample.yml
