@@ -3,8 +3,9 @@
 
 [[projects]]
   name = "github.com/aws/aws-sdk-go"
-  packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/request","aws/session","aws/signer/v4","private/endpoints","private/protocol","private/protocol/ec2query","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","private/waiter","service/ec2","service/ec2/ec2iface","service/sts"]
-  revision = "d8c88d08bd2ea15fa84ac414fe6c75b13b4c2023"
+  packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/ec2query","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","service/ec2","service/ec2/ec2iface","service/sts"]
+  revision = "83e491e1ee74c797ee52c228b654601ba6702c31"
+  version = "v1.12.37"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -20,8 +21,8 @@
 [[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
-  revision = "193d1ecb466bf97aae8b454a5cfc192941c64809"
-  version = "v1.9.0"
+  revision = "32e4c1e6bc4e7d0d8451aa6b75200d19e37a536a"
+  version = "v1.32.0"
 
 [[projects]]
   name = "github.com/go-playground/locales"
@@ -48,7 +49,7 @@
 [[projects]]
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
-  revision = "0b12d6b521d83fc7f755e7cfc1b1fbdd35a01a74"
+  revision = "0b12d6b5"
 
 [[projects]]
   branch = "master"
@@ -111,6 +112,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d7d29dda47e0cc03b229f9f212b914b54da41353f0ac9f8ff44dd671359e0c5f"
+  inputs-digest = "9a6e3af4bc1427e9b124d1263f265b44b4d429bce97184517b77dc2006e4916f"
   solver-name = "gps-cdcl"
   solver-version = 1

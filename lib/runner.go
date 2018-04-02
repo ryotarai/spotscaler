@@ -103,68 +103,12 @@ func (r *Runner) Run() error {
 		return err
 	}
 
-	err = r.propagateSIRTagsToInstances()
-	if err != nil {
-		return err
-	}
-
-	err = r.cancelDeadSIRs()
-	if err != nil {
-		return err
-	}
-
 	err = r.scale()
 	if err != nil {
 		return err
 	}
 
 	log.Println("[DEBUG] END Runner.Run")
-	return nil
-}
-
-func (r *Runner) propagateSIRTagsToInstances() error {
-	log.Println("[DEBUG] START: propagateSIRTagsToInstances")
-	// find active and status:pending SIRs
-	pendingSIRs, err := r.ec2Client.DescribePendingAndActiveSIRs()
-	if err != nil {
-		return err
-	}
-
-	if len(pendingSIRs) == 0 {
-		log.Println("[INFO] no active and pending spot instance requests")
-		return nil
-	}
-
-	log.Println("[INFO] propagating tags from spot instance requests")
-
-	// propagate tags
-	err = r.ec2Client.PropagateTagsFromSIRsToInstances(pendingSIRs)
-	if err != nil {
-		return err
-	}
-
-	// status:completed tag to SIR
-	err = r.ec2Client.CreateStatusTagsOfSIRs(pendingSIRs, "completed")
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *Runner) cancelDeadSIRs() error {
-	log.Println("[DEBUG] START: cancelDeadSIRs")
-
-	sirs, err := r.ec2Client.DescribeDeadSIRs()
-	if err != nil {
-		return err
-	}
-
-	err = r.ec2Client.CancelOpenSIRs(sirs)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
